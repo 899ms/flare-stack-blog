@@ -1,4 +1,6 @@
+import { z } from "zod";
 import {
+  CategoryOptionSchema,
   CreateCategoryInputSchema,
   DeleteCategoryInputSchema,
   GetCategoriesInputSchema,
@@ -36,6 +38,16 @@ const adminList = adminProcedure
   .handler(({ context, input }) =>
     CategoryService.getCategories(context, input),
   );
+
+const options = adminProcedure
+  .route({
+    method: "GET",
+    path: "/admin/categories/options",
+    summary: "List category options",
+    tags: ["Admin Categories"],
+  })
+  .output(z.array(CategoryOptionSchema))
+  .handler(({ context }) => CategoryService.getCategoryOptions(context));
 
 const create = adminProcedure
   .errors(categoryErrors)
@@ -95,6 +107,7 @@ export default {
   list,
   admin: {
     list: adminList,
+    options,
     create,
     update,
     remove,

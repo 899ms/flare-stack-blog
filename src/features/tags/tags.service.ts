@@ -175,13 +175,16 @@ export async function deleteTag(
   return ok({ success: true });
 }
 
-/**
- * Set tags for a post (edit only, no cache invalidation)
- *
- * 编辑页面改标签只影响 DB，不触发 KV 变化。
- * KV 只在"发布"时刷新。
- */
-export async function setPostTags(context: DbContext, data: SetPostTagsInput) {
+/** Update shared Tag assignments; public caches refresh in the background. */
+export async function setPostTags(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: SetPostTagsInput,
+) {
   await TagRepo.setPostTags(context.db, data.postId, data.tagIds);
-  await PostRepo.touchPostUpdatedAt(context.db, data.postId);
+  const post = await PostRepo.touchPostUpdatedAt(context.db, data.postId);
+  if (post?.publicSlug) {
+    context.executionCtx.waitUntil(
+      invalidate.tagChanged(context, { slugs: [post.publicSlug] }),
+    );
+  }
 }

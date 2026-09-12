@@ -1,3 +1,4 @@
+import { getCategoryOptions as readCategoryOptions } from "./data/category-options.data";
 import { invalidate } from "@/features/cache/public-cache";
 import { publicCategoryList } from "@/features/categories/categories.cache";
 import * as CategoryRepo from "@/features/categories/data/categories.data";
@@ -129,4 +130,8 @@ export async function deleteCategory(
   );
 
   return ok({ success: true });
+}
+
+export function getCategoryOptions(context: DbContext) {
+  return readCategoryOptions(context.db);
 }

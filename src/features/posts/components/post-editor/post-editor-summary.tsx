@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Image, Pencil, Tag } from "lucide-react";
-import { categoriesAdminQueryOptions } from "@/features/categories/queries";
+import { categoryOptionsQuery } from "@/features/categories/queries";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
 import { m } from "@/paraglide/messages";
 
@@ -15,9 +15,9 @@ export function PostEditorSummary({
   hasCover: boolean;
   onOpenInfo?: () => void;
 }) {
-  const { data: categories } = useQuery(categoriesAdminQueryOptions());
+  const { data: categories } = useQuery(categoryOptionsQuery);
   const { data: tags } = useQuery(tagsAdminQueryOptions());
-  const category = categories?.items.find((item) => item.id === categoryId);
+  const category = categories?.find((item) => item.id === categoryId);
   const tagNames =
     tags?.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name) ?? [];
   const content = (

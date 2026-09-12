@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Select } from "@/components/ui/select";
-import { categoriesAdminQueryOptions } from "@/features/categories/queries";
+import { categoryOptionsQuery } from "@/features/categories/queries";
 import { m } from "@/paraglide/messages";
 
 interface CategorySelectProps {
@@ -9,8 +9,7 @@ interface CategorySelectProps {
 }
 
 export function CategorySelect({ value, onChange }: CategorySelectProps) {
-  const { data, isLoading } = useQuery(categoriesAdminQueryOptions());
-  const categories = data?.items ?? [];
+  const { data: categories = [], isLoading } = useQuery(categoryOptionsQuery);
 
   return (
     <Select

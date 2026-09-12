@@ -337,6 +337,18 @@
           }
         }
       },
+      "options": {
+        "~orpc": {
+          "errorMap": {},
+          "meta": {},
+          "route": {
+            "method": "GET",
+            "path": "/admin/categories/options",
+            "summary": "List category options",
+            "tags": ["Admin Categories"]
+          }
+        }
+      },
       "create": {
         "~orpc": {
           "errorMap": {},

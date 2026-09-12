@@ -1,3 +1,4 @@
+import { invalidate } from "@/features/cache/public-cache";
 import * as MediaRepo from "@/features/media/data/media.data";
 import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
@@ -212,6 +213,13 @@ export async function restorePostRevision(
   }
 
   await syncPostMedia(context.db, restoredPost);
+  if (restoredPost.publicSnapshotJson) {
+    context.executionCtx.waitUntil(
+      invalidate.postPublished(context, {
+        slug: restoredPost.publicSnapshotJson.slug,
+      }),
+    );
+  }
 
   return ok({
     post: restoredPost,

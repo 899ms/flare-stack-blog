@@ -277,7 +277,7 @@ describe("Tags & Search Integration", () => {
       expect(results).toHaveLength(0);
     });
 
-    it("should rebuild index from database", async () => {
+    it("should rebuild index using current tags even when the public snapshot has none", async () => {
       const context = createAdminTestContext();
       await seedUser(context.db, context.session.user);
 
@@ -295,7 +295,7 @@ describe("Tags & Search Integration", () => {
           summary: "From DB",
           slug: "db-post",
           contentJson: { type: "doc", content: [] },
-          tagIds: [1],
+          tagIds: [],
           categoryId: null,
           publishedAt: new Date().toISOString(),
           pinnedAt: null,

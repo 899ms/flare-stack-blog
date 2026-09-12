@@ -1,4 +1,4 @@
-import { and, asc, count, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { PostsTable, PostTagsTable, TagsTable } from "@/lib/db/schema";
 
@@ -33,34 +33,6 @@ export async function getAllTagsWithCount(
   } = {},
 ) {
   const { sortBy = "name", sortDir = "asc", publicOnly = false } = options;
-  if (publicOnly) {
-    const orderFn = sortDir === "asc" ? asc : desc;
-    return await db
-      .select({
-        id: TagsTable.id,
-        name: TagsTable.name,
-        createdAt: TagsTable.createdAt,
-        postCount: countDistinct(PostsTable.id).as("postCount"),
-      })
-      .from(PostsTable)
-      .innerJoin(
-        sql`json_each(${PostsTable.publicSnapshotJson}, '$.tagIds') AS public_tag`,
-        sql`true`,
-      )
-      .innerJoin(TagsTable, eq(TagsTable.id, sql`public_tag.value`))
-      .where(sql`${PostsTable.publicSnapshotJson} IS NOT NULL`)
-      .groupBy(TagsTable.id)
-      .orderBy(
-        orderFn(
-          sortBy === "postCount"
-            ? sql`postCount`
-            : sortBy === "createdAt"
-              ? TagsTable.createdAt
-              : TagsTable.name,
-        ),
-      );
-  }
-
   const query = db
     .select({
       id: TagsTable.id,
@@ -70,6 +42,12 @@ export async function getAllTagsWithCount(
     })
     .from(TagsTable)
     .leftJoin(PostTagsTable, eq(TagsTable.id, PostTagsTable.tagId))
+    .leftJoin(PostsTable, eq(PostsTable.id, PostTagsTable.postId))
+    .where(
+      publicOnly
+        ? sql`${PostsTable.publicSnapshotJson} IS NOT NULL`
+        : undefined,
+    )
     .groupBy(TagsTable.id)
     .$dynamic();
 
@@ -211,7 +189,7 @@ export async function getPublishedPostsByTagId(db: DB, tagId: number) {
     .from(PostsTable)
     .where(
       and(
-        sql`EXISTS (SELECT 1 FROM json_each(${PostsTable.publicSnapshotJson}, '$.tagIds') AS public_tag WHERE public_tag.value = ${tagId})`,
+        sql`EXISTS (SELECT 1 FROM ${PostTagsTable} WHERE ${PostTagsTable.postId} = ${PostsTable.id} AND ${PostTagsTable.tagId} = ${tagId})`,
         sql`${PostsTable.publicSnapshotJson} IS NOT NULL`,
       ),
     );

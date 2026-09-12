@@ -25,8 +25,13 @@ import type {
   PostItem,
 } from "@/features/posts/schema/posts.schema";
 import { isPostBodyEmpty } from "@/features/posts/utils/is-post-body-empty";
-import type { PostStatus, PublicPostSnapshot, Tag } from "@/lib/db/schema";
-import { CategoriesTable, PostsTable, TagsTable } from "@/lib/db/schema";
+import type { PostStatus, PublicPostSnapshot } from "@/lib/db/schema";
+import {
+  CategoriesTable,
+  PostsTable,
+  PostTagsTable,
+  TagsTable,
+} from "@/lib/db/schema";
 
 const DEFAULT_PAGE_SIZE = 12;
 const DEFAULT_SITEMAP_BATCH_SIZE = 500;
@@ -44,47 +49,24 @@ async function hydratePublicPosts(
     publicSnapshotJson: PublicPostSnapshot | null;
   }>,
 ): Promise<Array<PostItem>> {
-  const tagIds = [
-    ...new Set(rows.flatMap((row) => row.publicSnapshotJson?.tagIds ?? [])),
-  ];
-  const categoryIds = [
-    ...new Set(
-      rows.flatMap((row) => {
-        const categoryId = row.publicSnapshotJson?.categoryId;
-        return categoryId == null ? [] : [categoryId];
-      }),
+  if (rows.length === 0) return [];
+  const assignments = await db.query.PostsTable.findMany({
+    columns: { id: true },
+    where: inArray(
+      PostsTable.id,
+      rows.map((row) => row.id),
     ),
-  ];
-  const tags =
-    tagIds.length > 0
-      ? await db.select().from(TagsTable).where(inArray(TagsTable.id, tagIds))
-      : [];
-  const categories =
-    categoryIds.length > 0
-      ? await db
-          .select()
-          .from(CategoriesTable)
-          .where(inArray(CategoriesTable.id, categoryIds))
-      : [];
-  const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
-  const categoriesById = new Map(
-    categories.map((category) => [category.id, category]),
-  );
-
+    with: { category: true, postTags: { with: { tag: true } } },
+  });
+  const byId = new Map(assignments.map((post) => [post.id, post]));
   return rows.flatMap((row) => {
-    const snapshot = row.publicSnapshotJson;
-    if (!snapshot) return [];
-    const itemTags = snapshot.tagIds
-      .map((id) => tagsById.get(id))
-      .filter((tag): tag is Tag => !!tag);
-    const itemCategory =
-      snapshot.categoryId == null
-        ? null
-        : (categoriesById.get(snapshot.categoryId) ?? null);
+    const assignment = byId.get(row.id);
     const item = mapSnapshotToPublicPost(
       row,
-      itemTags,
-      itemCategory ? { id: itemCategory.id, name: itemCategory.name } : null,
+      assignment?.postTags.map(({ tag }) => tag) ?? [],
+      assignment?.category
+        ? { id: assignment.category.id, name: assignment.category.name }
+        : null,
     );
     return item ? [item] : [];
   });
@@ -274,23 +256,21 @@ export async function getPostsCursor(
     conditions.push(
       sql`EXISTS (
         SELECT 1
-        FROM json_each(json_extract(${PostsTable.publicSnapshotJson}, '$.tagIds'))
-        JOIN ${TagsTable} ON ${TagsTable.id} = json_each.value
-        WHERE ${TagsTable.name} = ${tagName}
+        FROM ${PostTagsTable}
+        JOIN ${TagsTable} ON ${TagsTable.id} = ${PostTagsTable.tagId}
+        WHERE ${PostTagsTable.postId} = ${PostsTable.id} AND ${TagsTable.name} = ${tagName}
       )`,
     );
   }
 
   if (uncategorized) {
-    conditions.push(
-      sql`json_extract(${PostsTable.publicSnapshotJson}, '$.categoryId') IS NULL`,
-    );
+    conditions.push(sql`${PostsTable.categoryId} IS NULL`);
   } else if (categoryName) {
     conditions.push(
       sql`EXISTS (
         SELECT 1
         FROM ${CategoriesTable}
-        WHERE ${CategoriesTable.id} = json_extract(${PostsTable.publicSnapshotJson}, '$.categoryId')
+        WHERE ${CategoriesTable.id} = ${PostsTable.categoryId}
           AND ${CategoriesTable.name} = ${categoryName}
       )`,
     );
@@ -488,12 +468,12 @@ export async function updatePost(
 }
 
 export async function touchPostUpdatedAt(db: DB, id: number) {
-  await db
+  const [post] = await db
     .update(PostsTable)
-    .set({
-      updatedAt: new Date(),
-    })
-    .where(eq(PostsTable.id, id));
+    .set({ updatedAt: new Date() })
+    .where(eq(PostsTable.id, id))
+    .returning({ publicSlug: PostsTable.publicSlug });
+  return post;
 }
 
 export async function writePublicSnapshot(

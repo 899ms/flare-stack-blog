@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import type { PostStatus } from "@/lib/db/schema";
 import type { AdminTaxonomyFilter } from "@/features/posts/schema/posts.schema";
-import { CategoriesTable, PostTagsTable, PostsTable } from "@/lib/db/schema";
+import { PostTagsTable, PostsTable } from "@/lib/db/schema";
 
 export type SortField = "publishedAt" | "updatedAt";
 export type SortDirection = "ASC" | "DESC";
@@ -27,19 +27,11 @@ export function adminPostTextColumns(taxonomy?: AdminTaxonomyFilter) {
   };
 }
 function taxonomyWhereClause(taxonomy: AdminTaxonomyFilter): SQL {
-  if (taxonomy.scope === "current") {
-    if (taxonomy.kind === "category")
-      return eq(PostsTable.categoryId, taxonomy.id);
-    if (taxonomy.kind === "uncategorized")
-      return sql`${PostsTable.categoryId} IS NULL`;
-    return sql`EXISTS (SELECT 1 FROM ${PostTagsTable} WHERE ${PostTagsTable.postId} = ${PostsTable.id} AND ${PostTagsTable.tagId} = ${taxonomy.id})`;
-  }
-  const publicPost = sql`${PostsTable.publicSnapshotJson} IS NOT NULL`;
   if (taxonomy.kind === "category")
-    return sql`${publicPost} AND json_extract(${PostsTable.publicSnapshotJson}, '$.categoryId') = ${taxonomy.id}`;
+    return eq(PostsTable.categoryId, taxonomy.id);
   if (taxonomy.kind === "uncategorized")
-    return sql`${publicPost} AND NOT EXISTS (SELECT 1 FROM ${CategoriesTable} WHERE ${CategoriesTable.id} = json_extract(${PostsTable.publicSnapshotJson}, '$.categoryId'))`;
-  return sql`${publicPost} AND EXISTS (SELECT 1 FROM json_each(${PostsTable.publicSnapshotJson}, '$.tagIds') AS snapshot_tag WHERE snapshot_tag.value = ${taxonomy.id})`;
+    return sql`${PostsTable.categoryId} IS NULL`;
+  return sql`EXISTS (SELECT 1 FROM ${PostTagsTable} WHERE ${PostTagsTable.postId} = ${PostsTable.id} AND ${PostTagsTable.tagId} = ${taxonomy.id})`;
 }
 
 export function buildPostWhereClause(options: {
@@ -56,7 +48,7 @@ export function buildPostWhereClause(options: {
     whereClauses.push(eq(PostsTable.status, options.status));
   }
 
-  if (options.publicOnly) {
+  if (options.publicOnly || options.taxonomy?.scope === "public") {
     whereClauses.push(sql`${PostsTable.publicSnapshotJson} IS NOT NULL`);
   }
 

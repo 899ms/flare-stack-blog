@@ -376,6 +376,13 @@ export async function updatePost(
     await syncPostMedia(context.db, updatedPost);
   }
 
+  if (updateData.categoryId !== undefined && updatedPost.publicSnapshotJson) {
+    context.executionCtx.waitUntil(
+      invalidate.categoryChanged(context, {
+        slugs: [updatedPost.publicSnapshotJson.slug],
+      }),
+    );
+  }
   return ok(stripPublicSnapshot(updatedPost));
 }
 

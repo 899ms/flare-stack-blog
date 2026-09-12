@@ -1,4 +1,4 @@
-import { inArray, isNotNull } from "drizzle-orm";
+import { isNotNull } from "drizzle-orm";
 import { convertToPlainText } from "@/features/posts/utils/content";
 import * as SearchRepo from "@/features/search/data/search.data";
 import {
@@ -16,7 +16,7 @@ import {
   tokenizeForSearch,
 } from "@/features/search/tokenize";
 import { buildSnippet } from "@/features/search/utils/search.utils";
-import { CategoriesTable, PostsTable } from "@/lib/db/schema";
+import { PostsTable } from "@/lib/db/schema";
 
 function toIndexedDocument(
   data: UpsertSearchDocInput,
@@ -110,6 +110,7 @@ export async function rebuildIndex(context: DbContext) {
   const posts = await db.query.PostsTable.findMany({
     where: isNotNull(PostsTable.publicSnapshotJson),
     with: {
+      category: true,
       postTags: {
         with: {
           tag: true,
@@ -118,37 +119,12 @@ export async function rebuildIndex(context: DbContext) {
     },
   });
 
-  const categoryIds = [
-    ...new Set(
-      posts.flatMap((post) => {
-        const categoryId = post.publicSnapshotJson?.categoryId;
-        return categoryId == null ? [] : [categoryId];
-      }),
-    ),
-  ];
-  const categories =
-    categoryIds.length > 0
-      ? await db
-          .select()
-          .from(CategoriesTable)
-          .where(inArray(CategoriesTable.id, categoryIds))
-      : [];
-  const categoriesById = new Map(
-    categories.map((category) => [category.id, category]),
-  );
-
   const documents = [];
   for (const post of posts) {
     const snapshot = post.publicSnapshotJson;
     if (!snapshot?.title || !snapshot.slug) continue;
-    const publishedTagIds = new Set(snapshot.tagIds);
-    const tags = post.postTags
-      .filter((pt) => publishedTagIds.has(pt.tag.id))
-      .map((pt) => pt.tag.name);
-    const categoryName =
-      snapshot.categoryId == null
-        ? null
-        : (categoriesById.get(snapshot.categoryId)?.name ?? null);
+    const tags = post.postTags.map((pt) => pt.tag.name);
+    const categoryName = post.category?.name ?? null;
 
     documents.push(
       toIndexedDocument({

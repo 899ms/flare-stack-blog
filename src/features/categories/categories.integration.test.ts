@@ -6,6 +6,7 @@ import {
   waitForBackgroundTasks,
 } from "tests/test-utils";
 import * as CategoryService from "@/features/categories/categories.service";
+import * as TagService from "@/features/tags/tags.service";
 import * as PostService from "@/features/posts/services/posts.service";
 import { unwrap } from "@/lib/errors";
 
@@ -17,7 +18,7 @@ describe("Category", () => {
     await seedUser(adminContext.db, adminContext.session.user);
   });
 
-  it("publishes a Category onto the Public Content Snapshot and lists by name", async () => {
+  it("lists a published Post by its current Category", async () => {
     const category = unwrap(
       await CategoryService.createCategory(adminContext, { name: "技术" }),
     );
@@ -93,5 +94,59 @@ describe("Category", () => {
       slug: "life-post",
     });
     expect(post?.category).toBeNull();
+  });
+  it("updates shared assignments and warm public caches while keeping edited content unpublished", async () => {
+    const category = unwrap(
+      await CategoryService.createCategory(adminContext, {
+        name: "New category",
+      }),
+    );
+    const tag = unwrap(
+      await TagService.createTag(adminContext, { name: "New tag" }),
+    );
+    const { id } = await PostService.createEmptyPost(adminContext);
+    unwrap(
+      await PostService.updatePost(adminContext, {
+        id,
+        data: { title: "Public title", slug: "shared-assignments" },
+      }),
+    );
+    unwrap(await PostService.publishPost(adminContext, { id }));
+    const reader = createTestContext();
+    await PostService.findPostBySlug(reader, { slug: "shared-assignments" });
+    await CategoryService.getPublicCategories(reader);
+    await TagService.getPublicTags(reader);
+    await waitForBackgroundTasks(reader.executionCtx);
+
+    unwrap(
+      await PostService.updatePost(adminContext, {
+        id,
+        data: { title: "Unpublished title", categoryId: category.id },
+      }),
+    );
+    await TagService.setPostTags(adminContext, {
+      postId: id,
+      tagIds: [tag.id],
+    });
+    await waitForBackgroundTasks(adminContext.executionCtx);
+
+    const post = await PostService.findPostBySlug(createTestContext(), {
+      slug: "shared-assignments",
+    });
+    expect(post?.title).toBe("Public title");
+    expect(post?.category).toEqual({ id: category.id, name: category.name });
+    expect(post?.tags?.map((item) => item.id)).toEqual([tag.id]);
+    expect(
+      await CategoryService.getPublicCategories(createTestContext()),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: category.id, postCount: 1 }),
+      ]),
+    );
+    expect(await TagService.getPublicTags(createTestContext())).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: tag.id, postCount: 1 }),
+      ]),
+    );
   });
 });

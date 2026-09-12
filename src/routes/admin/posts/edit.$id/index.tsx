@@ -6,7 +6,7 @@ import { persistableTagIds } from "@/features/posts/components/post-editor/post-
 import { PostEditorSkeleton } from "@/features/posts/components/post-editor/post-editor-skeleton";
 import type { PostEditorData } from "@/features/posts/components/post-editor/types";
 import { postByIdQuery } from "@/features/posts/queries";
-import { categoriesAdminQueryOptions } from "@/features/categories/queries";
+import { categoryOptionsQuery } from "@/features/categories/queries";
 import {
   tagsAdminQueryOptions,
   tagsByPostIdQueryOptions,
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/admin/posts/edit/$id/")({
       context.queryClient.ensureQueryData(postByIdQuery(postId)),
       context.queryClient.ensureQueryData(tagsByPostIdQueryOptions(postId)),
       context.queryClient.prefetchQuery(tagsAdminQueryOptions()),
-      context.queryClient.prefetchQuery(categoriesAdminQueryOptions()),
+      context.queryClient.prefetchQuery(categoryOptionsQuery),
     ]);
     return { title: post?.title };
   },

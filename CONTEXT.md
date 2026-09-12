@@ -17,7 +17,7 @@ A **Post** that has a **Public Content Snapshot** and therefore appears in publi
 _Avoid_: Live article, scheduled post, future post
 
 **Public Content Snapshot**:
-The published state of a **Post** that the public site reads for listing, detail, search, and caching. It includes the public title, summary, slug, content, tags, **Category**, publication date, pin state, and **Post Cover**. Editing or autosaving a **Post** does not change it. Publishing replaces it. Unpublishing discards it.
+The published state of a **Post** that the public site reads for listing, detail, search, and caching. It includes the public title, summary, slug, content, publication date, pin state, and **Post Cover**. Editing or autosaving a **Post** does not change it. Publishing replaces it. Unpublishing discards it.
 _Avoid_: publicContentJson, rendered content, cached content, live version, working copy
 
 **Post Revision**:
@@ -31,6 +31,14 @@ _Avoid_: Label, topic
 **Category**:
 An exclusive, non-hierarchical grouping of **Posts**. A **Post** has at most one **Category**.
 _Avoid_: Section, channel, folder, taxonomy, 栏目
+
+**Current Assignment**:
+The **Posts** currently associated with a **Category** or **Tag**, including both **Draft Posts** and **Published Posts**.
+_Avoid_: Draft-only usage
+
+**Public Usage**:
+The **Published Posts** within a **Category** or **Tag**'s **Current Assignment**. Category and Tag assignment changes apply without republishing the Post.
+_Avoid_: Separate published assignment
 
 **Comment**:
 A user-authored response attached to a **Post**, public as soon as it is created, whose body is text. The author or an **Admin** can delete it from the public post page; deletion keeps a placeholder in the **Comment Thread** instead of removing the row.
@@ -118,10 +126,10 @@ _Avoid_: New commit, fork update
 - A **Post** has at most one **Category**.
 - A **Category** can group zero or more **Posts**.
 - A **Post** with no **Category** is uncategorized. Uncategorized is not a **Category**.
-- Publishing a **Post** writes its **Category** into the **Public Content Snapshot**. Autosave does not. A snapshot with no **Category** is uncategorized.
+- **Category** and **Tag** assignments are shared by the editor and public site. Assignment edits, renames and deletion apply without republishing; public caches may refresh later.
 - An **Admin** assigns a **Category** by choosing an existing one while editing a **Post**. Editing a **Post** does not create a **Category**.
 - **Categories** and **Tags** are managed on one Admin page.
-- Deleting a **Category** is allowed. **Posts** that had it become uncategorized. A **Public Content Snapshot** whose **Category** no longer exists is uncategorized.
+- Deleting a **Category** is allowed. **Posts** that had it become uncategorized. Deleting a **Tag** removes its Post associations.
 - A **Category** is identified by a unique name.
 - The public site can list **Published Posts** by **Category**, and can apply a **Category** filter and a **Tag** filter together.
 - A **Post** can have zero or more **Post Revisions**.
@@ -140,7 +148,7 @@ _Avoid_: New commit, fork update
 - Autosave does not create a **Post Revision**.
 - Editing or autosaving a **Post** does not update the **Public Content Snapshot**.
 - Unpublishing a **Published Post** discards its **Public Content Snapshot**, making it a **Draft Post**, and removes it from public listing, detail, and search.
-- Restoring a **Post Revision** first saves the current editable **Post** as a **Post Revision**, then writes the chosen snapshot into the **Post** the **Admin** is editing. It does not replace or discard the **Public Content Snapshot**.
+- Restoring a **Post Revision** first saves the current editable **Post** as a **Post Revision**, then restores the editable content and shared Category/Tag assignments. It does not replace or discard the **Public Content Snapshot**.
 - Publishing with a new slug replaces the **Public Content Snapshot** slug. The previous public slug does not remain reachable.
 - A **Published Post** has a publication date for display and listing order. The date is a past or current server date, never a future date. First publication without a date uses server time.
 - A **Post Revision** belongs to exactly one **Post**.
@@ -173,7 +181,7 @@ _Avoid_: New commit, fork update
 - An **API Key** cannot create or revoke **API Keys**. Only a signed-in **Admin** in the admin UI can.
 - A **User** can create **Comments** and submit **Friend Links**.
 - The **Search Index** includes **Published Posts** and excludes **Draft Posts**.
-- Publishing a **Post** updates the **Search Index** from the **Public Content Snapshot**. Unpublishing removes that **Post** from the **Search Index**.
+- Publishing a **Post** updates the **Search Index** from its **Public Content Snapshot** and current Category/Tag assignments. Unpublishing removes that **Post** from the **Search Index**. Category/Tag changes may remain stale in search until republishing or rebuilding the index.
 - Publishing, deleting, or retagging a **Published Post** can update the **Public Cache**.
 - The public sidebar lists **Categories** that appear on at least one **Published Post**, ordered by name. It does not list uncategorized.
 - The **Search Index** includes the **Category** name of a **Published Post**.

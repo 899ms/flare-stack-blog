@@ -8,10 +8,12 @@ const CategorySelectSchema = createSelectSchema(CategoriesTable, {
   createdAt: coercedDate,
 });
 
-export const PublicCategorySchema = z.object({
+export const CategoryOptionSchema = z.object({
   id: z.number().int(),
   name: z.string(),
 });
+
+export const PublicCategorySchema = CategoryOptionSchema;
 
 export const CategoryWithCountSchema = CategorySelectSchema.extend({
   postCount: z.number(),

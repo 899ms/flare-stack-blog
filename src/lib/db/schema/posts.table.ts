@@ -25,6 +25,7 @@ export type PublicPostSnapshot = {
   summary: string | null;
   slug: string;
   contentJson: JSONContent | null;
+  // Historical metadata; live Category/Tag assignments use the relations below.
   tagIds: Array<number>;
   categoryId: number | null;
   publishedAt: string;
