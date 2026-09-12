@@ -6,10 +6,6 @@ export type ApiContext = {
   auth: Auth;
 };
 
-export type OptionalSessionApiContext = ApiContext & {
-  session: Session | null;
-};
-
 export type AuthedApiContext = ApiContext & {
   session: Session;
 };

@@ -33,18 +33,3 @@ export interface PostEditorProps {
 }
 
 export type SaveStatus = "SYNCED" | "SAVING" | "PENDING" | "ERROR";
-
-export const defaultPostData: PostEditorData = {
-  title: "",
-  summary: "",
-  slug: "",
-  contentJson: null,
-  publishedAt: null,
-  pinnedAt: null,
-  tagIds: [],
-  categoryId: null,
-  hasPublicSnapshot: false,
-  serverToday: "",
-  coverMediaId: null,
-  cover: null,
-};

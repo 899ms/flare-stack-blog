@@ -133,7 +133,6 @@ export const AdjacentPostsSchema = z.object({
 
 export type GetPostsCursorInput = z.infer<typeof GetPostsCursorInputSchema>;
 export type FindPostBySlugInput = z.infer<typeof FindPostBySlugInputSchema>;
-export type AdjacentPosts = z.infer<typeof AdjacentPostsSchema>;
 
 // Admin API Schemas
 export const GenerateSlugInputSchema = z.object({

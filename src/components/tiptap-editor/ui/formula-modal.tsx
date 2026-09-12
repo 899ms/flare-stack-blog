@@ -10,12 +10,6 @@ import { m } from "@/paraglide/messages";
 
 export type FormulaMode = "inline" | "block";
 
-export interface FormulaModalPayload {
-  latex: string;
-  pos: number;
-  type: FormulaMode;
-}
-
 interface FormulaModalProps {
   isOpen: boolean;
   mode: FormulaMode;

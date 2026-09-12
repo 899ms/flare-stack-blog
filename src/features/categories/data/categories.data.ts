@@ -44,20 +44,6 @@ export async function nameExists(
   return !!row;
 }
 
-export async function getAllCategories(
-  db: DB,
-  options: {
-    sortBy?: "name" | "createdAt";
-    sortDir?: "asc" | "desc";
-  } = {},
-) {
-  const { sortBy = "name", sortDir = "asc" } = options;
-  const orderFn = sortDir === "asc" ? asc : desc;
-  const orderColumn =
-    sortBy === "createdAt" ? CategoriesTable.createdAt : CategoriesTable.name;
-  return await db.select().from(CategoriesTable).orderBy(orderFn(orderColumn));
-}
-
 export async function getAllCategoriesWithCount(
   db: DB,
   options: {

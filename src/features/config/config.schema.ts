@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { blogConfig } from "@/blog.config";
 import {
-  createSiteConfigInputFormSchema,
   type SiteConfigInput,
   SiteConfigInputSchema,
 } from "@/features/config/site-config.schema";
@@ -9,7 +8,6 @@ import {
   legacyWebhookEndpointSchema,
   webhookEndpointSchema,
 } from "@/features/webhook/webhook.schema";
-import type { Messages } from "@/lib/i18n";
 
 export const SystemConfigSchema = z.object({
   email: z
@@ -46,34 +44,6 @@ export const SystemConfigSchema = z.object({
     .optional(),
   site: SiteConfigInputSchema.optional(),
 });
-
-export const createSystemConfigFormSchema = (messages: Messages) =>
-  z
-    .object({
-      email: SystemConfigSchema.shape.email,
-      notification: SystemConfigSchema.shape.notification,
-      site: createSiteConfigInputFormSchema(messages).optional(),
-    })
-    .superRefine((data, ctx) => {
-      const url = data.notification?.webhook?.url?.trim() ?? "";
-      if (!url) return;
-
-      if (!z.url().safeParse(url).success) {
-        ctx.addIssue({
-          code: "custom",
-          message: messages.settings_webhook_url_invalid(),
-          path: ["notification", "webhook", "url"],
-        });
-      }
-
-      if (!data.notification?.webhook?.secret?.trim()) {
-        ctx.addIssue({
-          code: "custom",
-          message: messages.settings_webhook_secret_required(),
-          path: ["notification", "webhook", "secret"],
-        });
-      }
-    });
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 export type {
