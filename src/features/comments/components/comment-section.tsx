@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Turnstile, useTurnstile } from "@/components/common/turnstile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useComments } from "@/features/comments/hooks/use-comments";
+import { useCommentComposer } from "@/features/comments/hooks/use-comment-composer";
 import { useMutedUsers } from "@/features/muted-users/hooks/use-muted-users";
 import { useScrollToComment } from "@/features/comments/hooks/use-scroll-to-comment";
 import {
@@ -43,8 +44,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
   } = listQuery;
   const location = useLocation();
   const compactChallenge = useMediaQuery("(max-width: 380px)");
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [rootOpen, setRootOpen] = useState(false);
   const threadQuery = useQuery({
     ...commentThreadQuery(postId, commentId ?? 0),
     enabled: commentId != null,
@@ -65,11 +64,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
   );
   const { muteUser, unmuteUser, isMuting, isUnmuting } = useMutedUsers(postId);
 
-  const [replyTarget, setReplyTarget] = useState<{
-    rootId: number;
-    commentId: number;
-    userName: string;
-  } | null>(null);
   const [localReveal, setLocalReveal] = useState<{
     rootId: number;
     commentId: number;
@@ -83,26 +77,9 @@ export function CommentSection({ postId }: CommentSectionProps) {
     (thread && commentId != null ? { rootId: thread.id, commentId } : null);
 
   useEffect(() => {
-    setDrafts({});
-    setReplyTarget(null);
-    setRootOpen(false);
     setLocalReveal(null);
     setLocallyMuted(false);
   }, [postId, session?.user.id]);
-  const updateDraft = (key: string, value: string) =>
-    setDrafts((previous) => ({ ...previous, [key]: value }));
-  const focusReplyButton = (id?: number) => {
-    if (id != null)
-      document
-        .querySelector<HTMLButtonElement>(
-          `#comment-${id} .comment-reply-button`,
-        )
-        ?.focus({ preventScroll: true });
-  };
-  const cancelReply = () => {
-    focusReplyButton(replyTarget?.commentId);
-    setReplyTarget(null);
-  };
   const loginReturn = (id?: number) => {
     const params = new URLSearchParams(location.searchStr);
     if (id != null) params.set("comment", String(id));
@@ -158,39 +135,20 @@ export function CommentSection({ postId }: CommentSectionProps) {
     throw new Error("TURNSTILE_PENDING");
   };
 
-  const handleCreateComment = async (content: string) => {
-    requireTurnstile();
-    try {
-      const created = await createComment({ postId, content });
-      updateDraft("root", "");
-      setRootOpen(false);
-      if (created?.id)
-        setLocalReveal({ rootId: created.id, commentId: created.id });
-    } finally {
-      resetTurnstile();
-    }
-  };
-
-  const handleCreateReply = async (content: string) => {
-    if (!replyTarget) return;
-    requireTurnstile();
-    try {
-      const created = await createComment({
-        postId,
-        content,
-        rootId: replyTarget.rootId,
-        replyToCommentId: replyTarget.commentId,
-      });
-      if (created?.id) {
-        setLocalReveal({ rootId: replyTarget.rootId, commentId: created.id });
-      }
-      updateDraft(`reply:${replyTarget.commentId}`, "");
-      focusReplyButton(replyTarget.commentId);
-      setReplyTarget(null);
-    } finally {
-      resetTurnstile();
-    }
-  };
+  const {
+    root: rootComposer,
+    reply: replyComposer,
+    startRoot,
+    startReply,
+  } = useCommentComposer({
+    postId,
+    userId: session?.user.id,
+    isCreating,
+    createComment,
+    challenge: { requireReady: requireTurnstile, reset: resetTurnstile },
+    onCreated: setLocalReveal,
+  });
+  const replyTarget = replyComposer.target;
 
   const handleDelete = async () => {
     if (commentToDelete) {
@@ -227,15 +185,13 @@ export function CommentSection({ postId }: CommentSectionProps) {
         <CommentAvatar name={session?.user.name} image={session?.user.image} />
         <CommentEditor
           key={replyTarget.commentId}
-          value={drafts[`reply:${replyTarget.commentId}`] ?? ""}
-          onChange={(value) =>
-            updateDraft(`reply:${replyTarget.commentId}`, value)
-          }
-          onSubmit={handleCreateReply}
+          value={replyComposer.value}
+          onChange={replyComposer.onChange}
+          onSubmit={replyComposer.onSubmit}
           isSubmitting={isCreating}
           challengePending={turnstilePending}
           autoFocus
-          onCancel={cancelReply}
+          onCancel={replyComposer.onCancel}
           submitLabel={m.comments_editor_submit_reply()}
           label={m.comments_item_reply_to({ name: replyTarget.userName })}
           challenge={challenge}
@@ -256,7 +212,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         <button
           type="button"
           className="comment-text-button"
-          onClick={cancelReply}
+          onClick={replyComposer.onCancel}
         >
           {m.comments_editor_cancel()}
         </button>
@@ -291,49 +247,39 @@ export function CommentSection({ postId }: CommentSectionProps) {
         <p className="comments-muted">{m.comments_muted_message()}</p>
       ) : session ? (
         <>
-          {(!rootOpen || replyTarget) && (
+          {(!rootComposer.isOpen || replyTarget) && (
             <button
               type="button"
               className="comment-new-trigger"
               disabled={isCreating}
-              onClick={() => {
-                setReplyTarget(null);
-                setRootOpen(true);
-              }}
+              onClick={startRoot}
             >
               <CommentAvatar
                 name={session.user.name}
                 image={session.user.image}
               />
               <span>
-                {drafts.root?.trim()
+                {rootComposer.value.trim()
                   ? m.comments_continue_draft()
                   : m.comments_start_new()}
               </span>
             </button>
           )}
-          <CommentReveal open={rootOpen && !replyTarget}>
+          <CommentReveal open={rootComposer.isOpen && !replyTarget}>
             <div className="comment-new-composer">
               <CommentAvatar
                 name={session.user.name}
                 image={session.user.image}
               />
               <CommentEditor
-                value={drafts.root ?? ""}
-                onChange={(value) => updateDraft("root", value)}
-                onSubmit={handleCreateComment}
+                value={rootComposer.value}
+                onChange={rootComposer.onChange}
+                onSubmit={rootComposer.onSubmit}
                 isSubmitting={isCreating}
                 challengePending={turnstilePending}
                 challenge={challenge}
                 autoFocus
-                onCancel={() => {
-                  setRootOpen(false);
-                  requestAnimationFrame(() =>
-                    document
-                      .querySelector<HTMLButtonElement>(".comment-new-trigger")
-                      ?.focus({ preventScroll: true }),
-                  );
-                }}
+                onCancel={rootComposer.onCancel}
               />
             </div>
           </CommentReveal>
@@ -355,9 +301,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         rootComments={rootComments}
         postId={postId}
         onReply={(rootIdArg, commentIdArg, userName) => {
-          if (isCreating) return;
-          setRootOpen(false);
-          setReplyTarget({
+          startReply({
             rootId: rootIdArg,
             commentId: commentIdArg,
             userName,
