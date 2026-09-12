@@ -38,7 +38,7 @@ import { PostRow } from "@/features/posts/components/post-manager/components/pos
 import { PostManagerSkeleton } from "@/features/posts/components/post-manager/post-manager-skeleton";
 import { useDeletePost } from "@/features/posts/components/post-manager/hooks/use-posts";
 import type {
-  PostListItem,
+  AdminPostListItem,
   SortField,
 } from "@/features/posts/components/post-manager/types";
 import { LOW_WORKSPACE_HEIGHT } from "./content-workspace";
@@ -75,7 +75,9 @@ export function TaxonomyWorkspace({
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<HTMLTableSectionElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [postToDelete, setPostToDelete] = useState<PostListItem | null>(null);
+  const [postToDelete, setPostToDelete] = useState<AdminPostListItem | null>(
+    null,
+  );
   const postDeleteTrigger = useRef<HTMLButtonElement | null>(null);
   const lowHeight = useMediaQuery(LOW_WORKSPACE_HEIGHT);
   const getScroller = () =>

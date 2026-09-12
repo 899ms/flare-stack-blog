@@ -1,7 +1,7 @@
 import type { Post } from "@/lib/db/schema";
 
-/** Post without contentJson fields for list views */
-export type PostListItem = Omit<
+/** Post fields used by admin list rows. */
+export type AdminPostListItem = Omit<
   Post,
   | "contentJson"
   | "publicSnapshotJson"

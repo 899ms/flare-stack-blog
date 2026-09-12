@@ -14,7 +14,7 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { useListScroll } from "./hooks/use-list-scroll";
 import { useDeletePost, usePosts } from "./hooks";
 import { PostManagerSkeleton } from "./post-manager-skeleton";
-import type { PostListItem, SortField, StatusFilter } from "./types";
+import type { AdminPostListItem, SortField, StatusFilter } from "./types";
 import "./post-manager.css";
 
 interface PostManagerProps {
@@ -43,7 +43,9 @@ export function PostManager({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setPrimaryAction } = useAdminChrome();
-  const [postToDelete, setPostToDelete] = useState<PostListItem | null>(null);
+  const [postToDelete, setPostToDelete] = useState<AdminPostListItem | null>(
+    null,
+  );
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -12,13 +12,16 @@ import { MOTION, useMotionPresence } from "@/hooks/use-motion";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { TaxonomyReturn } from "@/components/admin/taxonomy-state";
-import type { PostListItem, SortField } from "../types";
+import type { AdminPostListItem, SortField } from "../types";
 
 interface PostRowProps {
-  post: PostListItem;
+  post: AdminPostListItem;
   sortBy: SortField;
   editorState?: () => { taxonomyReturn: TaxonomyReturn };
-  onDelete: (post: PostListItem, trigger: HTMLButtonElement | null) => void;
+  onDelete: (
+    post: AdminPostListItem,
+    trigger: HTMLButtonElement | null,
+  ) => void;
 }
 
 export function PostRow({ post, sortBy, onDelete, editorState }: PostRowProps) {

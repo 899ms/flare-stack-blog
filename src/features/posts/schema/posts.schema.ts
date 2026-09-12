@@ -226,6 +226,5 @@ export type UpdatePostInput = z.infer<typeof UpdatePostInputSchema>;
 export type DeletePostInput = z.infer<typeof DeletePostInputSchema>;
 export type PublishPostInput = z.infer<typeof PublishPostInputSchema>;
 export type UnpublishPostInput = z.infer<typeof UnpublishPostInputSchema>;
-export type PostListItem = PostItem;
 export type PostItem = z.infer<typeof PostItemSchema>;
 export type PostWithToc = z.infer<typeof PostWithTocSchema>;

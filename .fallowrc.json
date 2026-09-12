@@ -16,6 +16,7 @@
     "ignore": ["src/routeTree.gen.ts"]
   },
   "rules": {
+    "duplicate-exports": "off",
     "unused-dependencies": "warn"
   },
   "usedClassMembers": [

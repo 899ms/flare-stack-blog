@@ -23,7 +23,6 @@ import { mapSnapshotToPublicPost } from "@/features/posts/public-snapshot";
 import type {
   AdminTaxonomyFilter,
   PostItem,
-  PostListItem,
 } from "@/features/posts/schema/posts.schema";
 import { isPostBodyEmpty } from "@/features/posts/utils/is-post-body-empty";
 import type { PostStatus, PublicPostSnapshot, Tag } from "@/lib/db/schema";
@@ -230,7 +229,7 @@ export async function getPostsCursor(
     excludePinned?: boolean;
   } = {},
 ): Promise<{
-  items: Array<PostListItem>;
+  items: Array<PostItem>;
   nextCursor: number | null;
 }> {
   const {

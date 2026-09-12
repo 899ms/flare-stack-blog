@@ -10,7 +10,7 @@ import { adminPostsQuery } from "@/features/posts/queries";
 import { orpc, orpcClient } from "@/lib/orpc";
 import { ADMIN_ITEMS_PER_PAGE } from "@/lib/constants";
 import { m } from "@/paraglide/messages";
-import type { PostListItem, SortField, StatusFilter } from "../types";
+import type { AdminPostListItem, SortField, StatusFilter } from "../types";
 import { statusFilterToApi } from "../types";
 
 interface UsePostsOptions {
@@ -66,7 +66,7 @@ export function useDeletePost({ onSuccess }: UseDeletePostOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (post: PostListItem) => {
+    mutationFn: async (post: AdminPostListItem) => {
       await orpcClient.posts.admin.remove({ id: post.id });
       return post;
     },
