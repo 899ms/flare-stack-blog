@@ -34,7 +34,14 @@ export function PublicLayout({
     select: (state) =>
       state.matches.some((match) => match.routeId.includes("/_auth")),
   });
+  const hasRouteError = useRouterState({
+    select: (state) =>
+      state.matches.some(
+        (match) => match.status === "error" || match.status === "notFound",
+      ),
+  });
   const isFocusedPage =
+    hasRouteError ||
     isAuthPage ||
     location.pathname === "/submit-friend-link" ||
     location.pathname === "/profile";
@@ -80,14 +87,16 @@ export function PublicLayout({
       >
         <div
           className={cn(
-            "relative mx-auto px-0 md:px-4 pb-8 grid gap-4",
+            "public-content-grid relative mx-auto px-0 md:px-4 pb-8 grid gap-4",
             isFocusedPage
               ? "grid-cols-1"
               : "grid-cols-1 lg:grid-cols-[17.5rem_1fr]",
           )}
           style={{ maxWidth: "var(--fuwari-page-width)" }}
         >
-          {isFocusedPage ? null : <Sidebar className="order-2 lg:order-1" />}
+          {isFocusedPage ? null : (
+            <Sidebar className="public-sidebar order-2 lg:order-1" />
+          )}
 
           <main
             className={cn(
@@ -102,7 +111,7 @@ export function PublicLayout({
 
           <div
             className={cn(
-              "fuwari-onload-animation mt-auto",
+              "public-footer fuwari-onload-animation mt-auto",
               isFocusedPage ? "" : "order-3 lg:col-start-2",
             )}
             style={{ animationDelay: "250ms" }}

@@ -5,11 +5,11 @@
   "nav_friend_links": "友链",
   "nav_search": "搜索",
   "nav_login": "登录",
-  "error_title": "页面暂时无法访问",
-  "error_desc": "服务器遇到了一点小麻烦，你可以尝试刷新页面，或稍后再来看看。",
-  "error_retry": "刷新重试",
-  "not_found_title": "找不到该页面",
-  "not_found_desc": "你访问的文章或页面可能已被删除、移动，或者链接地址有误。",
+  "error_title": "页面暂时无法加载",
+  "error_desc": "请稍后重试，或先返回首页。",
+  "error_retry": "重新尝试",
+  "not_found_title": "页面没有找到",
+  "not_found_desc": "这个页面可能已被移走，或链接地址有误。",
   "not_found_return": "返回首页",
   "home_greeting": "你好",
   "home_latest_posts": "最新文章",
@@ -1710,5 +1710,10 @@
   "search_retry_hint": "无法加载搜索结果，请重试。",
   "search_retry": "重新搜索",
   "search_result_count": "显示 {count} 条搜索结果",
-  "search_empty_hint": "试试更简短的关键词，或检查是否有错别字。"
+  "search_empty_hint": "试试更简短的关键词，或检查是否有错别字。",
+  "error_retrying": "正在重试…",
+  "error_retry_failed": "暂时仍无法加载，请稍后再试。",
+  "error_back_dashboard": "返回概览",
+  "admin_not_found_desc": "当前管理页面不存在，你可以返回概览或继续管理文章。",
+  "admin_error_desc": "请稍后重试，或先返回后台概览。"
 }

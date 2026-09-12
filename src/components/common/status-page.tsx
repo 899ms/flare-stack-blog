@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import "./status-page.css";
 
 export function StatusPage({
   code,
@@ -13,17 +13,18 @@ export function StatusPage({
   action?: ReactNode;
 }) {
   return (
-    <div className="fuwari-card-base fuwari-onload-animation flex flex-col items-center justify-center px-6 py-20 text-center md:py-24">
-      {code ? <p className="text-sm text-(--fuwari-primary)">{code}</p> : null}
-      <h1 className={cn("text-2xl font-medium fuwari-text-90", code && "mt-4")}>
-        {title}
-      </h1>
-      {description ? (
-        <p className="mt-3 max-w-md text-sm leading-relaxed fuwari-text-50">
-          {description}
-        </p>
-      ) : null}
-      {action ? <div className="mt-8">{action}</div> : null}
+    <div className="site-status-frame">
+      <section
+        className="site-status fuwari-card-base fuwari-content-enter"
+        data-kind={code ? "error" : "neutral"}
+      >
+        {code ? <p className="site-status-code">{code}</p> : null}
+        <h1>{title}</h1>
+        {description ? (
+          <p className="site-status-description">{description}</p>
+        ) : null}
+        {action ? <div className="site-status-actions">{action}</div> : null}
+      </section>
     </div>
   );
 }

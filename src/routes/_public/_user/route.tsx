@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_public/_user")({
     return { session };
   },
   component: UserGate,
-  errorComponent: ({ error }) => <ErrorPage error={error} />,
+  errorComponent: ErrorPage,
   headers: () => {
     return CACHE_CONTROL.private;
   },

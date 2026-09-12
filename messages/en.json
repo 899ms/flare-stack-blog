@@ -5,11 +5,11 @@
   "nav_friend_links": "Links",
   "nav_search": "Search",
   "nav_login": "Login",
-  "error_title": "Page Temporarily Unavailable",
-  "error_desc": "Something went wrong while loading this page. Please try refreshing, or check back later.",
-  "error_retry": "Refresh and Try Again",
-  "not_found_title": "Page Not Found",
-  "not_found_desc": "The page or post you are looking for may have been moved, deleted, or the URL might be incorrect.",
+  "error_title": "Page temporarily unavailable",
+  "error_desc": "Please try again, or return to the homepage.",
+  "error_retry": "Try again",
+  "not_found_title": "Page not found",
+  "not_found_desc": "This page may have moved, or the link may be incorrect.",
   "not_found_return": "Back to Home",
   "home_greeting": "Hello",
   "home_latest_posts": "Latest Posts",
@@ -1718,5 +1718,10 @@
   "search_retry_hint": "Could not load search results. Please try again.",
   "search_retry": "Retry search",
   "search_result_count": "Showing {count} search results",
-  "search_empty_hint": "Try a shorter keyword or check the spelling."
+  "search_empty_hint": "Try a shorter keyword or check the spelling.",
+  "error_retrying": "Trying again…",
+  "error_retry_failed": "Still unable to load this page. Please try again later.",
+  "error_back_dashboard": "Back to overview",
+  "admin_not_found_desc": "This admin page does not exist. Return to the overview or continue managing posts.",
+  "admin_error_desc": "Please try again, or return to the admin overview."
 }
