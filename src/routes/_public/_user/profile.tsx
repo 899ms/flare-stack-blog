@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProfilePage as ProfileView } from "@/features/auth/components/profile-page";
 import {
   useLogout,
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/_public/_user/profile")({
 });
 
 function ProfilePage() {
+  const navigate = useNavigate();
   const { data: session } = authClient.useSession();
   const user = session?.user;
 
@@ -36,7 +37,11 @@ function ProfilePage() {
   const passwordForm = usePasswordForm();
   const { data: hasPassword } = useQuery(hasPasswordQuery(!!user));
   const notification = useNotificationToggle(user?.id);
-  const { logout } = useLogout();
+  const { logout } = useLogout({
+    onSuccess: () => {
+      void navigate({ to: "/" });
+    },
+  });
 
   if (!user) return null;
 

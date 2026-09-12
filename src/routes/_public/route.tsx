@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
   Outlet,
@@ -6,12 +5,10 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { toast } from "sonner";
 import { PublicLayout as SitePublicLayout } from "@/components/layout/public-layout";
 import { Toaster } from "@/components/layout/toaster";
-import { resetAuthBoundQueries } from "@/features/auth/queries";
+import { useLogout } from "@/features/auth/hooks/use-logout";
 import { authClient } from "@/lib/auth/auth.client";
-import { getLogoutAuthErrorMessage } from "@/lib/auth/auth-errors";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { clientEnv } from "@/lib/env/client.env";
 import { isExternalNavHref } from "@/features/config/utils/nav-links";
@@ -43,7 +40,7 @@ function PublicLayout() {
   const { siteConfig } = useRouteContext({ from: "__root__" });
   const { data: session, isPending: isSessionPending } =
     authClient.useSession();
-  const queryClient = useQueryClient();
+  const { logout } = useLogout();
 
   const navOptions = [
     { id: "home", label: m.nav_home(), href: "/", external: false },
@@ -61,23 +58,6 @@ function PublicLayout() {
       external: isExternalNavHref(link.href),
     })),
   ];
-
-  const logout = async () => {
-    const { error } = await authClient.signOut();
-    if (error) {
-      toast.error(m.auth_logout_failed(), {
-        description:
-          getLogoutAuthErrorMessage(error, m) ?? m.auth_logout_failed_desc(),
-      });
-      return;
-    }
-
-    resetAuthBoundQueries(queryClient);
-
-    toast.success(m.auth_logout_success(), {
-      description: m.auth_logout_success_desc(),
-    });
-  };
 
   // Global shortcut: Cmd/Ctrl + K to navigate to search
   useEffect(() => {

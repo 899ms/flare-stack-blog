@@ -20,6 +20,31 @@ const FriendLinkWithUserSchema = FriendLinkSelectSchema.extend({
   user: FriendLinkUserSchema.nullable(),
 });
 
+const friendLinkFields = {
+  siteName: z.string().min(1).max(100),
+  siteUrl: z.string().url(),
+  description: z.string().max(300).optional(),
+  logoUrl: z.union([z.literal(""), z.string().url()]).optional(),
+};
+
+const createFriendLinkFormFields = (m: Messages) => ({
+  siteName: z
+    .string()
+    .min(1, m.friend_link_validation_required())
+    .max(100, m.friend_link_validation_too_long({ max: 100 })),
+  siteUrl: z.string().url(m.friend_link_validation_invalid_url()),
+  description: z
+    .string()
+    .max(300, m.friend_link_validation_too_long({ max: 300 }))
+    .optional(),
+  logoUrl: z
+    .union([
+      z.literal(""),
+      z.string().url(m.friend_link_validation_invalid_url()),
+    ])
+    .optional(),
+});
+
 // === User submission input ===
 
 export const SubmitFriendLinkInputSchema = z.object({
@@ -31,59 +56,21 @@ export const SubmitFriendLinkInputSchema = z.object({
     .describe(
       "Omit for a new application. Supply an owned rejected application ID to revise and resubmit it.",
     ),
-  siteName: z.string().min(1).max(100),
-  siteUrl: z.string().url(),
-  description: z.string().max(300).optional(),
-  logoUrl: z.union([z.literal(""), z.string().url()]).optional(),
+  ...friendLinkFields,
 });
 
 export const createSubmitFriendLinkSchema = (m: Messages) =>
   z.object({
     id: z.number().int().positive().optional(),
-    siteName: z
-      .string()
-      .min(1, m.friend_link_validation_required())
-      .max(100, m.friend_link_validation_too_long({ max: 100 })),
-    siteUrl: z.string().url(m.friend_link_validation_invalid_url()),
-    description: z
-      .string()
-      .max(300, m.friend_link_validation_too_long({ max: 300 }))
-      .optional(),
-    logoUrl: z
-      .union([
-        z.literal(""),
-        z.string().url(m.friend_link_validation_invalid_url()),
-      ])
-      .optional(),
+    ...createFriendLinkFormFields(m),
   });
 
 // === Admin create input (manual add) ===
 
-export const CreateFriendLinkInputSchema = z.object({
-  siteName: z.string().min(1).max(100),
-  siteUrl: z.string().url(),
-  description: z.string().max(300).optional(),
-  logoUrl: z.union([z.literal(""), z.string().url()]).optional(),
-});
+export const CreateFriendLinkInputSchema = z.object(friendLinkFields);
 
 export const createCreateFriendLinkSchema = (m: Messages) =>
-  z.object({
-    siteName: z
-      .string()
-      .min(1, m.friend_link_validation_required())
-      .max(100, m.friend_link_validation_too_long({ max: 100 })),
-    siteUrl: z.string().url(m.friend_link_validation_invalid_url()),
-    description: z
-      .string()
-      .max(300, m.friend_link_validation_too_long({ max: 300 }))
-      .optional(),
-    logoUrl: z
-      .union([
-        z.literal(""),
-        z.string().url(m.friend_link_validation_invalid_url()),
-      ])
-      .optional(),
-  });
+  z.object(createFriendLinkFormFields(m));
 
 // === Admin inputs ===
 export const GetAllFriendLinksInputSchema = z.object({
@@ -104,10 +91,10 @@ export const RejectFriendLinkInputSchema = z.object({
 
 export const UpdateFriendLinkInputSchema = z.object({
   id: z.number(),
-  siteName: z.string().min(1).max(100).optional(),
-  siteUrl: z.string().url().optional(),
-  description: z.string().max(300).optional(),
-  logoUrl: z.union([z.literal(""), z.string().url()]).optional(),
+  siteName: friendLinkFields.siteName.optional(),
+  siteUrl: friendLinkFields.siteUrl.optional(),
+  description: friendLinkFields.description,
+  logoUrl: friendLinkFields.logoUrl,
 });
 
 export const DeleteFriendLinkInputSchema = z.object({
