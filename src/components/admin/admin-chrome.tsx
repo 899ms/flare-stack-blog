@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 
-export type AdminPrimaryAction = {
+type AdminPrimaryAction = {
   label: string;
   onClick: () => void;
   disabled?: boolean;

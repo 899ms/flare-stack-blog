@@ -29,7 +29,7 @@ function normalizePathname(pathname: string): string {
   return pathname;
 }
 
-export function postCacheTag(slug: string): string {
+function postCacheTag(slug: string): string {
   return `post:${encodeURIComponent(slug)}`;
 }
 

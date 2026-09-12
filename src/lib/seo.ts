@@ -12,7 +12,7 @@ type ArticleJsonLdInput = {
   };
 };
 
-export function buildCanonicalHref(
+function buildCanonicalHref(
   pathname: string,
   searchParams?: Record<string, string | undefined>,
 ) {

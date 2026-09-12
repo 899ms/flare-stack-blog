@@ -121,7 +121,7 @@ export const FindPostBySlugInputSchema = z.object({
   slug: z.string(),
 });
 
-export const AdjacentPublicPostSchema = z.object({
+const AdjacentPublicPostSchema = z.object({
   slug: z.string(),
   title: z.string(),
 });
@@ -140,7 +140,7 @@ export const GenerateSlugInputSchema = z.object({
   excludeId: z.number().optional(),
 });
 
-export const AdminTaxonomyFilterSchema = z.discriminatedUnion("kind", [
+const AdminTaxonomyFilterSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("category"),
     id: z.number().int().positive(),
@@ -187,7 +187,7 @@ const AdminPostListItemSchema = z.object({
   updatedAt: coercedDate,
 });
 
-export const AdminPostStatusCountsSchema = z.object({
+const AdminPostStatusCountsSchema = z.object({
   draft: z.number().int().nonnegative(),
   published: z.number().int().nonnegative(),
 });

@@ -1,4 +1,4 @@
-export const API_KEY_HEADER = "x-api-key";
+const API_KEY_HEADER = "x-api-key";
 
 const MANAGEMENT_SKIP = new Set([
   "/api-key/verify",

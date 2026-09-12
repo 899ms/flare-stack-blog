@@ -8,7 +8,7 @@ export interface ImageUploadResult {
   height?: number;
 }
 
-export interface ImageUploadOptions {
+interface ImageUploadOptions {
   onUpload: (file: File) => Promise<ImageUploadResult>;
   onError?: (error: Error) => void;
 }

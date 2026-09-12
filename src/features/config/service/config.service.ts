@@ -16,8 +16,6 @@ import type { SiteConfig } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
 import * as Storage from "@/features/media/data/media.storage";
 
-export { resolveSiteConfig, resolveSystemConfig };
-
 export async function getSystemConfig(
   context: DbContext & { executionCtx: ExecutionContext },
 ) {

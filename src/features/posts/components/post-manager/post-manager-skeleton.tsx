@@ -1,6 +1,6 @@
 import "./post-manager.css";
 
-export function PostRowSkeleton() {
+function PostRowSkeleton() {
   return (
     <tr aria-hidden="true">
       <td colSpan={4}>

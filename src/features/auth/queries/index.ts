@@ -3,7 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth/auth.client";
 import { orpc } from "@/lib/orpc";
 
-export const AUTH_KEYS = {
+const AUTH_KEYS = {
   session: ["auth", "session"] as const,
 };
 

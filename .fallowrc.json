@@ -25,7 +25,14 @@
     },
     {
       "extends": "DurableObject",
-      "members": ["alarm", "checkLimit", "hash", "verify"]
+      "members": [
+        "alarm",
+        "checkLimit",
+        "hash",
+        "verify",
+        "publish",
+        "unpublish"
+      ]
     }
   ],
   "ignorePatterns": [

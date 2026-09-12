@@ -25,7 +25,7 @@ const searchSchema = z.object({
   search: z.string().optional().default("").catch(""),
 });
 
-export type PostsSearchParams = z.infer<typeof searchSchema>;
+type PostsSearchParams = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/admin/posts/")({
   ssr: false,

@@ -2,19 +2,19 @@ import { z } from "zod";
 import { SystemConfigSchema } from "./config.schema";
 import { SiteConfigInputSchema } from "./site-config.schema";
 
-export const ConfigRevisionSchema = z
+const ConfigRevisionSchema = z
   .number()
   .int()
   .nonnegative()
   .describe(
     "Modification revision of the selected section, read from GET /admin/config. Site and notification revisions are independent; stale writes/tests fail with CONFIG_CONFLICT (409).",
   );
-export const SecretChangeSchema = z.discriminatedUnion("action", [
+const SecretChangeSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("keep") }).strict(),
   z.object({ action: z.literal("replace"), value: z.string().min(1) }).strict(),
   z.object({ action: z.literal("clear") }).strict(),
 ]);
-export const DeliveryEmailSchema = z
+const DeliveryEmailSchema = z
   .object({
     host: z.string().trim(),
     port: z.number().int().min(1).max(65535),
@@ -23,7 +23,7 @@ export const DeliveryEmailSchema = z
     senderAddress: z.union([z.email(), z.literal("")]),
   })
   .strict();
-export const DeliveryNotificationSchema = z
+const DeliveryNotificationSchema = z
   .object({
     admin: z
       .object({ channels: z.object({ email: z.boolean() }).strict() })

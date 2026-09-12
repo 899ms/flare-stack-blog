@@ -5,10 +5,7 @@ import type { WebhookMessage } from "@/lib/queue/queue.schema";
 import { m } from "@/paraglide/messages";
 import { baseLocale } from "@/paraglide/runtime";
 
-export function createPlainTextMessage(
-  event: NotificationEvent,
-  locale: Locale,
-) {
+function createPlainTextMessage(event: NotificationEvent, locale: Locale) {
   switch (event.type) {
     case "comment.admin_root_created":
       return m.email_webhook_comment_admin_root_message(

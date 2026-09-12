@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PostPopularityEntrySchema = z.object({
+const PostPopularityEntrySchema = z.object({
   postId: z.number().int().positive(),
   score: z.number().int().positive(),
 });

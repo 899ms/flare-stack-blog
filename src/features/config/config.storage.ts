@@ -3,7 +3,7 @@ import { z } from "zod";
 import { resolveSystemConfig } from "./config.resolve";
 import { SystemConfigSchema, type SystemConfig } from "./config.schema";
 
-export const CONFIG_SCHEMA_VERSION = 1;
+const CONFIG_SCHEMA_VERSION = 1;
 export type StoredSystemConfig = SystemConfig & { schemaVersion?: number };
 
 /** Version 0 includes SMTP apiKey, social objects and webhook arrays. */

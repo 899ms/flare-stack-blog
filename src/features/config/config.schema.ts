@@ -46,10 +46,7 @@ export const SystemConfigSchema = z.object({
 });
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
-export type {
-  SiteConfig,
-  SiteConfigInput,
-} from "@/features/config/site-config.schema";
+export type { SiteConfig } from "@/features/config/site-config.schema";
 
 export const DEFAULT_CONFIG: SystemConfig = {
   email: {

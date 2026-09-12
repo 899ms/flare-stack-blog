@@ -7,7 +7,7 @@ import { CategoriesTable, PostTagsTable, PostsTable } from "@/lib/db/schema";
 export type SortField = "publishedAt" | "updatedAt";
 export type SortDirection = "ASC" | "DESC";
 
-export function escapeLikeString(str: string) {
+function escapeLikeString(str: string) {
   return str.replace(/[%_\\]/g, "\\$&");
 }
 
@@ -26,7 +26,7 @@ export function adminPostTextColumns(taxonomy?: AdminTaxonomyFilter) {
     slug: sql<string>`coalesce(json_extract(${PostsTable.publicSnapshotJson}, '$.slug'), ${PostsTable.publicSlug}, ${PostsTable.slug})`,
   };
 }
-export function taxonomyWhereClause(taxonomy: AdminTaxonomyFilter): SQL {
+function taxonomyWhereClause(taxonomy: AdminTaxonomyFilter): SQL {
   if (taxonomy.scope === "current") {
     if (taxonomy.kind === "category")
       return eq(PostsTable.categoryId, taxonomy.id);

@@ -4,7 +4,7 @@ import {
 } from "./post-popularity.schema";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-export const POST_POPULARITY_WINDOW_DAYS = 30;
+const POST_POPULARITY_WINDOW_DAYS = 30;
 export const POST_POPULARITY_MAX_AGE_MS = 7 * DAY_MS;
 
 export type PostPopularityWindow = {

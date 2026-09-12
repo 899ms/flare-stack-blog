@@ -77,7 +77,7 @@ export function resolveSiteConfig(
   });
 }
 
-export function resolveWebhookEndpoint(
+function resolveWebhookEndpoint(
   notification: SystemConfig["notification"] | null | undefined,
 ): WebhookEndpoint {
   const currentUrl = notification?.webhook?.url?.trim() ?? "";

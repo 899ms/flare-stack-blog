@@ -6,7 +6,7 @@ import { isEmailConfigured } from "@/features/email/service/email.service";
 export const DASHBOARD_RECENT_POSTS_LIMIT = 4;
 export const DASHBOARD_PENDING_FRIEND_LINKS_LIMIT = 5;
 export const DASHBOARD_RECENT_COMMENTS_LIMIT = 8;
-export const DASHBOARD_COMMENT_SNIPPET_LENGTH = 80;
+const DASHBOARD_COMMENT_SNIPPET_LENGTH = 80;
 
 export type PopularityAlert = "failed" | "expired";
 

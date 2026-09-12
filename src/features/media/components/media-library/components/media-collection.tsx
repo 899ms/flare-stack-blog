@@ -7,7 +7,7 @@ import { useMediaGridMotion } from "../hooks/use-media-grid-motion";
 import type { MediaAsset } from "../types";
 import type { MediaView } from "./media-toolbar";
 
-export function MediaThumbnail({ asset }: { asset: MediaAsset }) {
+function MediaThumbnail({ asset }: { asset: MediaAsset }) {
   const [failed, setFailed] = useState(false);
   return (
     <span className="media-thumbnail">

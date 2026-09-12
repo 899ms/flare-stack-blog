@@ -15,7 +15,7 @@ export function isExternalNavHref(href: string): boolean {
   }
 }
 
-export function isInternalNavHref(href: string): boolean {
+function isInternalNavHref(href: string): boolean {
   return href.startsWith("/") && !href.startsWith("//");
 }
 
