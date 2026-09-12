@@ -48,7 +48,7 @@ export async function getRootCommentsByPostId(
       offset: data.offset,
       limit: data.limit,
     }),
-    CommentRepo.getPublishedRootCommentsCount(context.db, data.postId),
+    CommentRepo.getPublishedCommentsCount(context.db, data.postId),
     viewerMuted(context),
   ]);
 

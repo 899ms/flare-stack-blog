@@ -1,75 +1,124 @@
 import { Loader2, Send } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { m } from "@/paraglide/messages";
+import { CommentEditorActive } from "./comment-reveal";
 
 interface CommentEditorProps {
+  value: string;
+  onChange: (value: string) => void;
   onSubmit: (content: string) => Promise<void>;
   isSubmitting?: boolean;
+  challengePending?: boolean;
   autoFocus?: boolean;
   onCancel?: () => void;
   submitLabel?: string;
+  label?: string;
   challenge?: ReactNode;
 }
-
-export const CommentEditor = ({
+export function CommentEditor({
+  value,
+  onChange,
   onSubmit,
   isSubmitting,
+  challengePending,
   autoFocus,
   onCancel,
   submitLabel,
+  label,
   challenge,
-}: CommentEditorProps) => {
-  const actualSubmitLabel = submitLabel || m.comments_editor_submit();
-  const [value, setValue] = useState("");
-  const isEmpty = value.trim() === "";
-
-  const handleSubmit = async () => {
-    if (isEmpty || isSubmitting) return;
+}: CommentEditorProps) {
+  const active = useContext(CommentEditorActive);
+  const id = useId();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const submitting = useRef(false);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (active && autoFocus) inputRef.current?.focus({ preventScroll: true });
+  }, [active, autoFocus]);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (
+      !value.trim() ||
+      isSubmitting ||
+      submitting.current ||
+      challengePending ||
+      !active
+    )
+      return;
+    submitting.current = true;
+    setError(false);
     try {
       await onSubmit(value.trim());
-      setValue("");
     } catch {
-      // Error handled by parent hook
+      setError(true);
+    } finally {
+      submitting.current = false;
     }
   };
-
   return (
-    <div className="relative rounded-(--fuwari-radius-large) border border-(--fuwari-input-border) bg-transparent transition-all duration-300 focus-within:bg-(--fuwari-primary)/5 focus-within:border-(--fuwari-primary)/50 focus-within:shadow-sm">
-      <textarea
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        autoFocus={autoFocus}
-        placeholder={m.comments_editor_placeholder()}
-        rows={3}
-        className="min-h-20 w-full bg-transparent px-4 py-3 text-sm focus:outline-none fuwari-text-75 resize-y"
-      />
-      <div className="flex flex-col gap-2 px-4 pb-3 pt-2 border-t border-black/5 dark:border-white/5 sm:flex-row sm:items-center sm:justify-between">
-        {challenge ? <div className="min-w-0">{challenge}</div> : <div />}
-        <div className="flex items-center gap-3 self-end">
+    <form className="comment-composer" onSubmit={handleSubmit}>
+      {label && (
+        <label className="comment-composer-target" htmlFor={id}>
+          {label}
+        </label>
+      )}
+      <div className="comment-composer-input">
+        <textarea
+          ref={inputRef}
+          id={id}
+          value={value}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setError(false);
+          }}
+          disabled={isSubmitting || !active}
+          aria-label={label || m.comments_editor_placeholder()}
+          placeholder={m.comments_editor_placeholder()}
+          rows={3}
+          aria-describedby={error ? `${id}-error` : undefined}
+        />
+      </div>
+      <div className="comment-composer-footer">
+        <div className="comment-challenge">{active ? challenge : null}</div>
+        <div className="comment-composer-actions">
           {onCancel && (
             <button
               type="button"
+              className="comment-text-button"
               onClick={onCancel}
-              className="fuwari-text-50 text-sm hover:fuwari-text-75 transition-colors"
+              disabled={isSubmitting}
             >
               {m.comments_editor_cancel()}
             </button>
           )}
           <button
-            type="button"
-            disabled={isEmpty || isSubmitting}
-            onClick={handleSubmit}
-            className="fuwari-btn-primary h-8 px-4 text-sm rounded-lg gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            type="submit"
+            className="fuwari-btn-primary"
+            disabled={
+              !value.trim() || isSubmitting || challengePending || !active
+            }
           >
-            <span>{actualSubmitLabel}</span>
             {isSubmitting ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={15} className="animate-spin" />
             ) : (
-              <Send size={14} />
+              <Send size={15} />
             )}
+            {submitLabel || m.comments_editor_submit()}
           </button>
         </div>
       </div>
-    </div>
+      {error && (
+        <p id={`${id}-error`} role="alert" className="comment-error">
+          {m.comments_send_failed_keep_draft()}
+        </p>
+      )}
+    </form>
   );
-};
+}

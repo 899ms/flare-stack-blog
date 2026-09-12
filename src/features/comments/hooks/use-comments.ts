@@ -12,17 +12,22 @@ function invalidateCommentViews(
   queryClient: ReturnType<typeof useQueryClient>,
   postId?: number,
 ) {
-  if (postId) {
-    queryClient.invalidateQueries({
-      queryKey: orpc.comments.roots.key({ input: { postId } }),
-    });
-    queryClient.invalidateQueries({
-      queryKey: orpc.comments.replies.key({ input: { postId } }),
-    });
-  }
-  queryClient.invalidateQueries({
-    queryKey: orpc.comments.mine.key(),
-  });
+  return Promise.all([
+    ...(postId
+      ? [
+          queryClient.invalidateQueries({
+            queryKey: orpc.comments.roots.key({ input: { postId } }),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: orpc.comments.replies.key({ input: { postId } }),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: orpc.comments.thread.key({ input: { postId } }),
+          }),
+        ]
+      : []),
+    queryClient.invalidateQueries({ queryKey: orpc.comments.mine.key() }),
+  ]);
 }
 
 export function useComments(
@@ -34,8 +39,8 @@ export function useComments(
   const createCommentMutation = useMutation({
     mutationFn: (input: CreateCommentInput) =>
       orpcClient.comments.create(input),
-    onSuccess: () => {
-      invalidateCommentViews(queryClient, postId);
+    onSuccess: async () => {
+      await invalidateCommentViews(queryClient, postId);
     },
     onError: (error) => {
       handleORPCError(error, {
@@ -79,8 +84,8 @@ export function useComments(
   const deleteCommentMutation = useMutation({
     mutationFn: (input: DeleteCommentInput) =>
       orpcClient.comments.remove(input),
-    onSuccess: () => {
-      invalidateCommentViews(queryClient, postId);
+    onSuccess: async () => {
+      await invalidateCommentViews(queryClient, postId);
       toast.success(m.comments_toast_delete_success());
     },
     onError: (error) => {

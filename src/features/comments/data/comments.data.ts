@@ -103,14 +103,13 @@ export async function getVisibleRootById(
   return comments[0] ?? null;
 }
 
-export async function getPublishedRootCommentsCount(db: DB, postId: number) {
+export async function getPublishedCommentsCount(db: DB, postId: number) {
   const result = await db
     .select({ count: count() })
     .from(CommentsTable)
     .where(
       and(
         eq(CommentsTable.postId, postId),
-        isNull(CommentsTable.rootId),
         eq(CommentsTable.status, "published"),
       ),
     );

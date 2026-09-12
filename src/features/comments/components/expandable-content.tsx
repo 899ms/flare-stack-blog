@@ -1,56 +1,66 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useId, useRef, useState } from "react";
 import { CommentBody } from "@/features/comments/components/comment-body";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-
-interface ExpandableContentProps {
-  content: string | null;
-  className?: string;
-  maxLines?: number;
-}
 
 export function ExpandableContent({
   content,
   className,
   maxLines = 6,
-}: ExpandableContentProps) {
+}: {
+  content: string | null;
+  className?: string;
+  maxLines?: number;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const [showButton, setShowButton] = useState(false);
+  const [size, setSize] = useState<{ full: number; collapsed: number } | null>(
+    null,
+  );
   const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      const isOverflowing =
-        contentRef.current.scrollHeight > contentRef.current.clientHeight;
-      setShowButton(isOverflowing);
-    }
-  }, [content]);
-
+  const id = useId();
+  useLayoutEffect(() => {
+    const element = contentRef.current;
+    if (!element) return;
+    const measure = () => {
+      const full = element.getBoundingClientRect().height;
+      const collapsed = Math.min(
+        full,
+        parseFloat(getComputedStyle(element).lineHeight) * maxLines,
+      );
+      setSize((previous) =>
+        previous?.full === full && previous.collapsed === collapsed
+          ? previous
+          : { full, collapsed },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [content, maxLines]);
   return (
-    <div className={cn("relative", className)}>
+    <div className={className}>
       <div
-        ref={contentRef}
-        className={cn(
-          "max-w-none text-sm fuwari-text-90 transition-all duration-300",
-          !expanded && "overflow-hidden",
-        )}
+        id={id}
+        className="comment-body-height"
         style={{
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical",
-          WebkitLineClamp: expanded ? "unset" : maxLines,
+          height: size ? (expanded ? size.full : size.collapsed) : undefined,
+          maxHeight: !size && !expanded ? `${maxLines * 1.7}em` : undefined,
         }}
       >
-        <CommentBody
-          content={content}
-          linkClassName="underline underline-offset-4 decoration-(--fuwari-primary)/40 hover:decoration-(--fuwari-primary) text-(--fuwari-primary) transition-all duration-300 break-all"
-        />
+        <div ref={contentRef} className="comment-body-text">
+          <CommentBody
+            content={content}
+            linkClassName="underline underline-offset-4 decoration-(--fuwari-primary)/40 hover:decoration-(--fuwari-primary) text-(--fuwari-primary) transition-all duration-300 break-all"
+          />
+        </div>
       </div>
-
-      {showButton && (
+      {size && size.full > size.collapsed + 1 && (
         <button
           type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="mt-1.5 text-xs text-(--fuwari-primary) hover:text-(--fuwari-primary-hover) font-medium transition-colors"
+          className="comment-thread-toggle"
+          aria-expanded={expanded}
+          aria-controls={id}
+          onClick={() => setExpanded((value) => !value)}
         >
           {expanded ? m.common_collapse() : m.common_expand_all()}
         </button>

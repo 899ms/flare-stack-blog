@@ -227,7 +227,7 @@ describe("Comments Integration", () => {
         expect(result.items[0].replyCount).toBe(1);
         expect(result.items[0].replies).toHaveLength(1);
         expect(result.items[0].replies[0].id).toBe(reply.id);
-        expect(result.total).toBe(1);
+        expect(result.total).toBe(2);
       });
 
       it("should get replies by root ID with pagination", async () => {
@@ -333,11 +333,120 @@ describe("Comments Integration", () => {
           userContext,
           { postId },
         );
-        expect(result.total).toBe(0);
         expect(result.items).toHaveLength(1);
         expect(result.items[0].id).toBe(root.id);
         expect(result.items[0].status).toBe("deleted");
         expect(result.items[0].replyCount).toBe(1);
+        expect(result.total).toBe(1);
+      });
+
+      it("should count published comments across all threads while paginating only visible roots", async () => {
+        const [firstRoot, secondRoot, deletedRoot, hiddenRoot] =
+          await userContext.db
+            .insert(CommentsTable)
+            .values([
+              {
+                postId,
+                userId: userContext.session.user.id,
+                content: "First root",
+                status: "published",
+                createdAt: new Date("2026-01-01T00:00:00Z"),
+              },
+              {
+                postId,
+                userId: userContext.session.user.id,
+                content: "Second root",
+                status: "published",
+                createdAt: new Date("2026-01-02T00:00:00Z"),
+              },
+              {
+                postId,
+                userId: userContext.session.user.id,
+                content: "Deleted with a surviving reply",
+                status: "deleted",
+                createdAt: new Date("2026-01-03T00:00:00Z"),
+              },
+              {
+                postId,
+                userId: userContext.session.user.id,
+                content: "Deleted with no surviving replies",
+                status: "deleted",
+                createdAt: new Date("2026-01-04T00:00:00Z"),
+              },
+            ])
+            .returning();
+
+        const { id: otherPostId } =
+          await PostService.createEmptyPost(adminContext);
+        await userContext.db.insert(CommentsTable).values([
+          {
+            postId,
+            rootId: firstRoot.id,
+            content: "First reply",
+            status: "published",
+          },
+          {
+            postId,
+            rootId: firstRoot.id,
+            content: "Second reply",
+            status: "published",
+          },
+          {
+            postId,
+            rootId: deletedRoot.id,
+            content: "Surviving reply",
+            status: "published",
+          },
+          {
+            postId,
+            rootId: firstRoot.id,
+            content: "Deleted reply",
+            status: "deleted",
+          },
+          {
+            postId,
+            rootId: hiddenRoot.id,
+            content: "Deleted hidden reply",
+            status: "deleted",
+          },
+          {
+            postId: otherPostId,
+            content: "Different post",
+            status: "published",
+          },
+        ]);
+
+        const firstPage = await CommentService.getRootCommentsByPostId(
+          userContext,
+          {
+            postId,
+            limit: 2,
+          },
+        );
+        expect(firstPage.total).toBe(5);
+        expect(firstPage.items.map((item) => item.id)).toEqual([
+          deletedRoot.id,
+          secondRoot.id,
+        ]);
+
+        const secondPage = await CommentService.getRootCommentsByPostId(
+          userContext,
+          {
+            postId,
+            offset: firstPage.items.length,
+            limit: 2,
+          },
+        );
+        expect(secondPage.total).toBe(5);
+        expect(secondPage.items.map((item) => item.id)).toEqual([firstRoot.id]);
+
+        const end = await CommentService.getRootCommentsByPostId(userContext, {
+          postId,
+          offset: firstPage.items.length + secondPage.items.length,
+          limit: 2,
+        });
+        expect(end.total).toBe(5);
+        expect(end.items).toEqual([]);
       });
 
       it("should omit deleted replies from replyCount and keep them in the preview", async () => {
@@ -373,6 +482,7 @@ describe("Comments Integration", () => {
         expect(result.items[0].replies).toHaveLength(2);
         expect(result.items[0].replies[0].status).toBe("deleted");
         expect(result.items[0].replies[1].status).toBe("published");
+        expect(result.total).toBe(2);
       });
 
       it("should preview the earliest three replies", async () => {

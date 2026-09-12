@@ -1723,5 +1723,13 @@
   "error_retry_failed": "Still unable to load this page. Please try again later.",
   "error_back_dashboard": "Back to overview",
   "admin_not_found_desc": "This admin page does not exist. Return to the overview or continue managing posts.",
-  "admin_error_desc": "Please try again, or return to the admin overview."
+  "admin_error_desc": "Please try again, or return to the admin overview.",
+  "comments_heading": "Comments",
+  "comments_more_actions": "Comment actions",
+  "comments_start_new": "Write a new comment…",
+  "comments_continue_draft": "Continue your comment draft…",
+  "comments_send_failed_keep_draft": "Could not send your comment. Your draft is preserved; please try again.",
+  "comments_load_failed": "Comments could not be loaded.",
+  "comments_replies_failed": "Replies could not be loaded.",
+  "comments_retry": "Retry"
 }

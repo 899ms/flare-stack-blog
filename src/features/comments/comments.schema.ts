@@ -73,7 +73,11 @@ export const RootCommentWithReplyCountSchema = CommentWithUserSchema.extend({
 
 export const GetRootCommentsResponseSchema = z.object({
   items: z.array(RootCommentWithReplyCountSchema),
-  total: z.number(),
+  total: z
+    .number()
+    .describe(
+      "Total published comments on this post, including roots and replies but excluding deleted placeholders. This is not the number of paginated root threads.",
+    ),
   viewerMuted: z.boolean(),
 });
 

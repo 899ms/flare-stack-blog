@@ -1,5 +1,6 @@
+import { useMediaQuery } from "@/hooks/use-motion";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { getRouteApi, Link } from "@tanstack/react-router";
+import { getRouteApi, Link, useLocation } from "@tanstack/react-router";
 import { LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +18,9 @@ import { m } from "@/paraglide/messages";
 import { CommentConfirmationModal } from "./comment-confirmation-modal";
 import { CommentEditor } from "./comment-editor";
 import { CommentList } from "./comment-list";
+import { CommentReveal } from "./comment-reveal";
+import { CommentAvatar } from "./comment-avatar";
+import "./comments.css";
 
 const routeApi = getRouteApi("/_public/post/$slug");
 const LOCATE_TOAST = "locate-comment";
@@ -29,8 +33,18 @@ interface CommentSectionProps {
 export function CommentSection({ postId }: CommentSectionProps) {
   const { data: session } = authClient.useSession();
   const { comment: commentId } = routeApi.useSearch();
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery(rootCommentsByPostIdInfiniteQuery(postId));
+  const listQuery = useInfiniteQuery(rootCommentsByPostIdInfiniteQuery(postId));
+  const {
+    data,
+    isPending: isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = listQuery;
+  const location = useLocation();
+  const compactChallenge = useMediaQuery("(max-width: 380px)");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [rootOpen, setRootOpen] = useState(false);
   const threadQuery = useQuery({
     ...commentThreadQuery(postId, commentId ?? 0),
     enabled: commentId != null,
@@ -60,9 +74,40 @@ export function CommentSection({ postId }: CommentSectionProps) {
     rootId: number;
     commentId: number;
   } | null>(null);
+  useEffect(() => {
+    // A new URL target takes precedence over the last comment sent locally.
+    setLocalReveal(null);
+  }, [commentId]);
   const reveal =
     localReveal ??
     (thread && commentId != null ? { rootId: thread.id, commentId } : null);
+
+  useEffect(() => {
+    setDrafts({});
+    setReplyTarget(null);
+    setRootOpen(false);
+    setLocalReveal(null);
+    setLocallyMuted(false);
+  }, [postId, session?.user.id]);
+  const updateDraft = (key: string, value: string) =>
+    setDrafts((previous) => ({ ...previous, [key]: value }));
+  const focusReplyButton = (id?: number) => {
+    if (id != null)
+      document
+        .querySelector<HTMLButtonElement>(
+          `#comment-${id} .comment-reply-button`,
+        )
+        ?.focus({ preventScroll: true });
+  };
+  const cancelReply = () => {
+    focusReplyButton(replyTarget?.commentId);
+    setReplyTarget(null);
+  };
+  const loginReturn = (id?: number) => {
+    const params = new URLSearchParams(location.searchStr);
+    if (id != null) params.set("comment", String(id));
+    return `${location.pathname}${params.size ? `?${params}` : ""}#comments`;
+  };
 
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
   const [pendingMute, setPendingMute] = useState<{
@@ -77,7 +122,9 @@ export function CommentSection({ postId }: CommentSectionProps) {
     turnstileProps,
   } = useTurnstile("comment");
 
-  useScrollToComment(threadQuery.isSuccess ? commentId : undefined);
+  useScrollToComment(
+    localReveal?.commentId ?? (threadQuery.isSuccess ? commentId : undefined),
+  );
 
   useEffect(() => {
     if (commentId == null || threadQuery.isSuccess || threadQuery.isError) {
@@ -114,10 +161,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
   const handleCreateComment = async (content: string) => {
     requireTurnstile();
     try {
-      await createComment({
-        postId,
-        content,
-      });
+      const created = await createComment({ postId, content });
+      updateDraft("root", "");
+      setRootOpen(false);
+      if (created?.id)
+        setLocalReveal({ rootId: created.id, commentId: created.id });
     } finally {
       resetTurnstile();
     }
@@ -136,6 +184,8 @@ export function CommentSection({ postId }: CommentSectionProps) {
       if (created?.id) {
         setLocalReveal({ rootId: replyTarget.rootId, commentId: created.id });
       }
+      updateDraft(`reply:${replyTarget.commentId}`, "");
+      focusReplyButton(replyTarget.commentId);
       setReplyTarget(null);
     } finally {
       resetTurnstile();
@@ -163,56 +213,156 @@ export function CommentSection({ postId }: CommentSectionProps) {
   const canCompose = !!session && !viewerMuted;
   const canReply = !viewerMuted;
 
-  if (isLoading || !data) {
-    return <CommentSectionSkeleton />;
-  }
+  const challenge = (
+    <div ref={turnstileRef}>
+      <Turnstile
+        {...turnstileProps}
+        size={compactChallenge ? "compact" : "normal"}
+      />
+    </div>
+  );
+  const replyEditor = replyTarget ? (
+    canCompose ? (
+      <div className="comment-reply-composer">
+        <CommentAvatar name={session?.user.name} image={session?.user.image} />
+        <CommentEditor
+          key={replyTarget.commentId}
+          value={drafts[`reply:${replyTarget.commentId}`] ?? ""}
+          onChange={(value) =>
+            updateDraft(`reply:${replyTarget.commentId}`, value)
+          }
+          onSubmit={handleCreateReply}
+          isSubmitting={isCreating}
+          challengePending={turnstilePending}
+          autoFocus
+          onCancel={cancelReply}
+          submitLabel={m.comments_editor_submit_reply()}
+          label={m.comments_item_reply_to({ name: replyTarget.userName })}
+          challenge={challenge}
+        />
+      </div>
+    ) : (
+      <div className="comments-login">
+        <p>
+          {m.comments_list_login_to_reply({ userName: replyTarget.userName })}
+        </p>
+        <Link
+          to="/login"
+          search={{ redirectTo: loginReturn(replyTarget.commentId) }}
+          className="fuwari-btn-regular"
+        >
+          {m.comments_login()}
+        </Link>
+        <button
+          type="button"
+          className="comment-text-button"
+          onClick={cancelReply}
+        >
+          {m.comments_editor_cancel()}
+        </button>
+      </div>
+    )
+  ) : null;
+
+  if (isLoading) return <CommentSectionSkeleton />;
+  if (!data)
+    return (
+      <section id="comments" className="comments-section">
+        <h2>{m.comments_heading()}</h2>
+        <div className="comment-load-error" role="alert">
+          <span>{m.comments_load_failed()}</span>
+          <button
+            type="button"
+            onClick={() => void listQuery.refetch()}
+            disabled={listQuery.isFetching}
+          >
+            {m.comments_retry()}
+          </button>
+        </div>
+      </section>
+    );
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold fuwari-text-90">
-        {m.comments_count({ count: totalCount })}
+    <section id="comments" className="comments-section">
+      <h2>
+        {m.comments_heading()} <span>{totalCount}</span>
       </h2>
-
       {session && viewerMuted ? (
-        <p className="text-sm fuwari-text-30 py-4">
-          {m.comments_muted_message()}
-        </p>
+        <p className="comments-muted">{m.comments_muted_message()}</p>
       ) : session ? (
-        <CommentEditor
-          onSubmit={handleCreateComment}
-          isSubmitting={isCreating && !replyTarget}
-          challenge={
-            replyTarget ? undefined : (
-              <div ref={turnstileRef}>
-                <Turnstile {...turnstileProps} />
-              </div>
-            )
-          }
-        />
-      ) : (
-        <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
-          <p className="text-sm fuwari-text-30">
-            {m.comments_join_discussion()}
-          </p>
-          <Link to="/login">
-            <button className="fuwari-btn-primary h-9 px-5 text-sm rounded-lg gap-2">
-              <LogIn size={14} />
-              {m.comments_login()}
+        <>
+          {(!rootOpen || replyTarget) && (
+            <button
+              type="button"
+              className="comment-new-trigger"
+              disabled={isCreating}
+              onClick={() => {
+                setReplyTarget(null);
+                setRootOpen(true);
+              }}
+            >
+              <CommentAvatar
+                name={session.user.name}
+                image={session.user.image}
+              />
+              <span>
+                {drafts.root?.trim()
+                  ? m.comments_continue_draft()
+                  : m.comments_start_new()}
+              </span>
             </button>
+          )}
+          <CommentReveal open={rootOpen && !replyTarget}>
+            <div className="comment-new-composer">
+              <CommentAvatar
+                name={session.user.name}
+                image={session.user.image}
+              />
+              <CommentEditor
+                value={drafts.root ?? ""}
+                onChange={(value) => updateDraft("root", value)}
+                onSubmit={handleCreateComment}
+                isSubmitting={isCreating}
+                challengePending={turnstilePending}
+                challenge={challenge}
+                autoFocus
+                onCancel={() => {
+                  setRootOpen(false);
+                  requestAnimationFrame(() =>
+                    document
+                      .querySelector<HTMLButtonElement>(".comment-new-trigger")
+                      ?.focus({ preventScroll: true }),
+                  );
+                }}
+              />
+            </div>
+          </CommentReveal>
+        </>
+      ) : (
+        <div className="comments-login">
+          <p>{m.comments_join_discussion()}</p>
+          <Link
+            to="/login"
+            search={{ redirectTo: loginReturn() }}
+            className="fuwari-btn-regular"
+          >
+            <LogIn size={16} />
+            {m.comments_login()}
           </Link>
         </div>
       )}
-
       <CommentList
         rootComments={rootComments}
         postId={postId}
-        onReply={(rootIdArg, commentIdArg, userName) =>
+        onReply={(rootIdArg, commentIdArg, userName) => {
+          if (isCreating) return;
+          setRootOpen(false);
           setReplyTarget({
             rootId: rootIdArg,
             commentId: commentIdArg,
             userName,
-          })
-        }
+          });
+        }}
         onDelete={(id) => setCommentToDelete(id)}
         onMute={(userId, userName) =>
           setPendingMute({ kind: "mute", userId, userName })
@@ -222,26 +372,33 @@ export function CommentSection({ postId }: CommentSectionProps) {
         }
         canReply={canReply}
         replyTarget={viewerMuted ? null : replyTarget}
-        onCancelReply={() => setReplyTarget(null)}
-        onSubmitReply={handleCreateReply}
-        isSubmittingReply={isCreating}
+        replyEditor={replyEditor}
         revealRootId={reveal?.rootId}
         revealCommentId={reveal?.commentId}
-        challenge={
-          replyTarget && canCompose ? (
-            <div ref={turnstileRef}>
-              <Turnstile {...turnstileProps} />
-            </div>
-          ) : undefined
-        }
       />
-
-      {hasNextPage && (
-        <div className="flex justify-center pt-4">
+      {listQuery.isError && (
+        <div className="comment-load-error" role="alert">
+          <span>{m.comments_load_failed()}</span>
           <button
-            onClick={() => fetchNextPage()}
+            type="button"
+            onClick={() =>
+              void (listQuery.isFetchNextPageError
+                ? fetchNextPage()
+                : listQuery.refetch())
+            }
+            disabled={listQuery.isFetching}
+          >
+            {m.comments_retry()}
+          </button>
+        </div>
+      )}
+      {hasNextPage && !listQuery.isError && (
+        <div className="comments-pagination">
+          <button
+            type="button"
+            className="fuwari-btn-regular"
+            onClick={() => void fetchNextPage()}
             disabled={isFetchingNextPage}
-            className="fuwari-btn-regular h-10 px-6 text-sm rounded-lg disabled:opacity-50"
           >
             {isFetchingNextPage ? m.comments_loading() : m.comments_load_more()}
           </button>
@@ -282,7 +439,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         }
         isLoading={isMuting || isUnmuting}
       />
-    </div>
+    </section>
   );
 }
 

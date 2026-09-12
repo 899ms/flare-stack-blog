@@ -56,6 +56,8 @@ const roots = optionalSessionProcedure
     method: "GET",
     path: "/posts/{postId}/comments",
     summary: "List root comments on a post",
+    description:
+      "Returns visible root threads with reply previews. Offset and limit paginate root threads, including deleted roots that still have published replies. Total counts all published roots and replies on the post, excluding deleted placeholders; it must not be used to calculate root pagination.",
     tags: ["Comments"],
   })
   .input(GetCommentsByPostIdInputSchema)

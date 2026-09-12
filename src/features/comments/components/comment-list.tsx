@@ -1,415 +1,179 @@
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
 import { remainingPublishedReplies } from "@/features/comments/comment-thread";
 import type { RootCommentWithReplyCount } from "@/features/comments/comments.schema";
 import { repliesByRootIdInfiniteQuery } from "@/features/comments/queries";
-import { orpc } from "@/lib/orpc";
-import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
-import { CommentEditor } from "./comment-editor";
 import { CommentItem } from "./comment-item";
-
-type RootCommentWithUser = RootCommentWithReplyCount;
-
-function shouldExpandThread(
-  root: RootCommentWithUser | undefined,
-  revealRootId: number | undefined,
-  revealCommentId: number | undefined,
-) {
-  if (
-    revealRootId == null ||
-    revealCommentId == null ||
-    revealRootId === revealCommentId
-  ) {
-    return false;
-  }
-  if (!root) return true;
-  return !root.replies.some((reply) => reply.id === revealCommentId);
-}
+import { CommentReveal } from "./comment-reveal";
 
 interface CommentListProps {
-  rootComments: Array<RootCommentWithUser>;
+  rootComments: RootCommentWithReplyCount[];
   postId: number;
-  onReply?: (rootId: number, commentId: number, userName: string) => void;
+  onReply: (rootId: number, commentId: number, userName: string) => void;
   onDelete?: (commentId: number) => void;
   onMute?: (userId: string, userName: string) => void;
   onUnmute?: (userId: string, userName: string) => void;
   canReply?: boolean;
   replyTarget?: { rootId: number; commentId: number; userName: string } | null;
-  onCancelReply?: () => void;
-  onSubmitReply?: (content: string) => Promise<void>;
-  isSubmittingReply?: boolean;
+  replyEditor?: ReactNode;
   revealRootId?: number;
   revealCommentId?: number;
-  challenge?: ReactNode;
 }
-
-export const CommentList = ({
-  rootComments,
-  postId,
-  onReply,
-  onDelete,
-  onMute,
-  onUnmute,
-  canReply = true,
-  replyTarget,
-  onCancelReply,
-  onSubmitReply,
-  isSubmittingReply,
-  revealRootId,
-  revealCommentId,
-  challenge,
-}: CommentListProps) => {
-  const { data: session } = authClient.useSession();
-  const [expandedRoots, setExpandedRoots] = useState<Set<number>>(() => {
-    const root = rootComments.find((item) => item.id === revealRootId);
-    if (shouldExpandThread(root, revealRootId, revealCommentId)) {
-      return new Set([revealRootId!]);
-    }
-    return new Set();
-  });
-
-  useEffect(() => {
-    const root = rootComments.find((item) => item.id === revealRootId);
-    if (shouldExpandThread(root, revealRootId, revealCommentId)) {
-      setExpandedRoots((prev) => new Set(prev).add(revealRootId!));
-    }
-  }, [revealCommentId, revealRootId, rootComments]);
-
-  const toggleExpand = (targetRootId: number) => {
-    setExpandedRoots((prev) => {
-      const next = new Set(prev);
-      if (next.has(targetRootId)) {
-        next.delete(targetRootId);
-      } else {
-        next.add(targetRootId);
-      }
-      return next;
-    });
-  };
-
-  if (rootComments.length === 0) {
-    return (
-      <div className="py-16 text-center">
-        <p className="text-sm fuwari-text-30">{m.comments_list_empty()}</p>
-      </div>
-    );
-  }
-
+export function CommentList({ rootComments, ...props }: CommentListProps) {
+  if (!rootComments.length)
+    return <p className="comments-empty">{m.comments_list_empty()}</p>;
   return (
-    <div>
+    <div className="comment-list">
       {rootComments.map((root) => (
-        <RootCommentWithReplies
-          key={root.id}
-          root={root}
-          postId={postId}
-          isExpanded={expandedRoots.has(root.id)}
-          onToggleExpand={() => toggleExpand(root.id)}
-          onReply={onReply}
-          onDelete={onDelete}
-          onMute={onMute}
-          onUnmute={onUnmute}
-          canReply={canReply}
-          replyTarget={replyTarget}
-          onCancelReply={onCancelReply}
-          onSubmitReply={onSubmitReply}
-          isSubmittingReply={isSubmittingReply}
-          session={session}
-          revealCommentId={
-            revealRootId === root.id ? revealCommentId : undefined
-          }
-          challenge={challenge}
-        />
+        <CommentThread key={root.id} root={root} {...props} />
       ))}
     </div>
   );
-};
-
-interface RootCommentWithRepliesProps {
-  root: RootCommentWithUser;
-  postId: number;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
-  onReply?: (rootId: number, commentId: number, userName: string) => void;
-  onDelete?: (commentId: number) => void;
-  onMute?: (userId: string, userName: string) => void;
-  onUnmute?: (userId: string, userName: string) => void;
-  canReply?: boolean;
-  replyTarget?: { rootId: number; commentId: number; userName: string } | null;
-  onCancelReply?: () => void;
-  onSubmitReply?: (content: string) => Promise<void>;
-  isSubmittingReply?: boolean;
-  session: ReturnType<typeof authClient.useSession>["data"];
-  revealCommentId?: number;
-  challenge?: ReactNode;
 }
-
-function RootCommentWithReplies({
+function CommentThread({
   root,
   postId,
-  isExpanded,
-  onToggleExpand,
   onReply,
   onDelete,
   onMute,
   onUnmute,
-  canReply = true,
+  canReply,
   replyTarget,
-  onCancelReply,
-  onSubmitReply,
-  isSubmittingReply,
-  session,
+  replyEditor,
+  revealRootId,
   revealCommentId,
-  challenge,
-}: RootCommentWithRepliesProps) {
-  const queryClient = useQueryClient();
-  const {
-    data: repliesData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
+}: Omit<CommentListProps, "rootComments"> & {
+  root: RootCommentWithReplyCount;
+}) {
+  const needsReveal =
+    revealRootId === root.id &&
+    revealCommentId !== root.id &&
+    !root.replies.some((reply) => reply.id === revealCommentId);
+  const [expanded, setExpanded] = useState(needsReveal);
+  useEffect(() => {
+    if (needsReveal) setExpanded(true);
+  }, [needsReveal, revealCommentId]);
+  const query = useInfiniteQuery({
     ...repliesByRootIdInfiniteQuery(postId, root.id),
-    enabled: isExpanded,
+    enabled: expanded,
   });
-
-  const fetchedReplies = repliesData?.pages.flatMap((page) => page.items) ?? [];
-  const displayedReplies =
-    isExpanded && fetchedReplies.length > 0 ? fetchedReplies : root.replies;
-  const remaining = remainingPublishedReplies(
-    root.replyCount,
-    displayedReplies,
-  );
-  const showThread = displayedReplies.length > 0 || remaining > 0;
-  const isReplyingToRoot =
-    replyTarget &&
-    replyTarget.rootId === root.id &&
-    replyTarget.commentId === root.id;
-
+  const fetched = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const replies = expanded && fetched.length ? fetched : root.replies;
+  const remaining = remainingPublishedReplies(root.replyCount, replies);
+  const preview = replies.slice(0, root.replies.length);
+  const extra = replies.slice(root.replies.length);
+  const highlighted = revealRootId === root.id ? revealCommentId : undefined;
   useEffect(() => {
-    if (!isExpanded) {
-      queryClient.removeQueries({
-        queryKey: orpc.comments.replies.key({
-          input: { postId, rootId: root.id },
-        }),
-      });
-    }
-  }, [isExpanded, postId, queryClient, root.id]);
-
-  useEffect(() => {
-    if (!isExpanded || revealCommentId == null || revealCommentId === root.id) {
-      return;
-    }
-    if (displayedReplies.some((reply) => reply.id === revealCommentId)) {
-      return;
-    }
-    if (hasNextPage && !isFetchingNextPage) {
-      void fetchNextPage();
-    }
+    if (
+      expanded &&
+      !query.isError &&
+      revealRootId === root.id &&
+      revealCommentId !== root.id &&
+      !replies.some((reply) => reply.id === revealCommentId) &&
+      query.hasNextPage &&
+      !query.isFetching
+    )
+      void query.fetchNextPage();
   }, [
-    displayedReplies,
-    fetchNextPage,
-    hasNextPage,
-    isExpanded,
-    isFetchingNextPage,
+    expanded,
+    query.isError,
+    query.hasNextPage,
+    query.isFetching,
+    query.fetchNextPage,
+    replies,
+    revealRootId,
     revealCommentId,
     root.id,
   ]);
-
-  return (
-    <div>
+  const itemProps = {
+    onReply,
+    onDelete,
+    onMute,
+    onUnmute,
+    canReply,
+    highlightCommentId: highlighted,
+  };
+  const renderReply = (reply: RootCommentWithReplyCount["replies"][number]) => (
+    <div key={reply.id}>
       <CommentItem
-        comment={root}
-        onReply={() => {
-          if (onReply) {
-            onReply(
-              root.id,
-              root.id,
-              root.user?.name || m.comments_item_unknown_user(),
-            );
-          }
-        }}
-        onDelete={onDelete}
-        onMute={onMute}
-        onUnmute={onUnmute}
-        canReply={canReply}
-        highlightCommentId={revealCommentId}
-        className={showThread ? "pb-2 border-b-0" : ""}
+        comment={reply}
+        {...itemProps}
+        isReply
+        replyToName={reply.replyTo?.name}
       />
-
-      {isReplyingToRoot && (
-        <div className="py-4 ml-12 animate-in fade-in slide-in-from-top-2 duration-300">
-          {session ? (
-            onSubmitReply && onCancelReply ? (
-              <ReplyForm
-                userName={replyTarget.userName}
-                onSubmit={onSubmitReply}
-                isSubmitting={isSubmittingReply ?? false}
-                onCancel={onCancelReply}
-                challenge={challenge}
-              />
-            ) : null
-          ) : (
-            <LoginToReplyPrompt
-              userName={replyTarget.userName}
-              onCancel={onCancelReply}
-            />
+      <CommentReveal
+        open={
+          replyTarget?.rootId === root.id && replyTarget.commentId === reply.id
+        }
+        className="comment-inline-reply"
+      >
+        {replyEditor}
+      </CommentReveal>
+    </div>
+  );
+  return (
+    <section className="comment-thread">
+      <CommentItem comment={root} {...itemProps} />
+      <CommentReveal
+        open={
+          replyTarget?.rootId === root.id && replyTarget.commentId === root.id
+        }
+        className="comment-root-reply"
+      >
+        {replyEditor}
+      </CommentReveal>
+      {(replies.length > 0 || remaining > 0) && (
+        <div className="comment-replies">
+          {preview.map(renderReply)}
+          <CommentReveal open={expanded && extra.length > 0}>
+            {extra.map(renderReply)}
+          </CommentReveal>
+          {expanded && query.isError && (
+            <div className="comment-load-error" role="alert">
+              <span>{m.comments_replies_failed()}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  void (query.isFetchNextPageError
+                    ? query.fetchNextPage()
+                    : query.refetch())
+                }
+                disabled={query.isFetching}
+              >
+                {m.comments_retry()}
+              </button>
+            </div>
+          )}
+          {expanded && !query.isError && query.isFetching && (
+            <p className="comment-load-state" role="status">
+              {m.comments_loading()}
+            </p>
+          )}
+          {expanded && remaining > 0 && query.hasNextPage && !query.isError && (
+            <button
+              type="button"
+              className="comment-thread-toggle"
+              onClick={() => void query.fetchNextPage()}
+              disabled={query.isFetching}
+            >
+              {m.comments_list_load_more_replies()}
+            </button>
+          )}
+          {(expanded || remaining > 0) && (
+            <button
+              type="button"
+              className="comment-thread-toggle"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded
+                ? m.comments_list_collapse_replies()
+                : m.comments_list_expand_replies({ count: remaining })}
+            </button>
           )}
         </div>
       )}
-
-      {showThread && (
-        <div className="ml-12 mt-1">
-          <div className="mt-2 space-y-0 pl-4">
-            {displayedReplies.map((reply) => {
-              const isReplyingToThis =
-                replyTarget &&
-                replyTarget.rootId === root.id &&
-                replyTarget.commentId === reply.id;
-              return (
-                <div key={reply.id}>
-                  <CommentItem
-                    comment={reply}
-                    onReply={() => {
-                      if (onReply) {
-                        onReply(
-                          root.id,
-                          reply.id,
-                          reply.replyTo?.name ||
-                            reply.user?.name ||
-                            m.comments_item_unknown_user(),
-                        );
-                      }
-                    }}
-                    onDelete={onDelete}
-                    onMute={onMute}
-                    onUnmute={onUnmute}
-                    canReply={canReply}
-                    isReply
-                    replyToName={reply.replyTo?.name}
-                    highlightCommentId={revealCommentId}
-                  />
-                  {isReplyingToThis && (
-                    <div className="py-4 ml-0 animate-in fade-in slide-in-from-top-2 duration-300">
-                      {session ? (
-                        <ReplyForm
-                          userName={replyTarget.userName}
-                          onSubmit={onSubmitReply!}
-                          isSubmitting={isSubmittingReply!}
-                          onCancel={onCancelReply!}
-                          challenge={challenge}
-                        />
-                      ) : (
-                        <LoginToReplyPrompt
-                          userName={replyTarget.userName}
-                          onCancel={onCancelReply}
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {isExpanded && remaining > 0 && hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="text-xs fuwari-text-50 hover:text-(--fuwari-primary) transition-colors font-medium py-2 disabled:opacity-50"
-              >
-                {isFetchingNextPage
-                  ? m.comments_loading()
-                  : m.comments_list_load_more_replies()}
-              </button>
-            )}
-          </div>
-
-          {isExpanded || remaining > 0 ? (
-            <button
-              onClick={onToggleExpand}
-              className="flex items-center gap-3 group py-1"
-            >
-              <div
-                className={`h-px transition-all duration-300 ${
-                  isExpanded
-                    ? "w-10 bg-(--fuwari-primary)/50"
-                    : "w-6 bg-black/10 dark:bg-white/10 group-hover:w-10 group-hover:bg-(--fuwari-primary)/50"
-                }`}
-              />
-              <span className="text-xs fuwari-text-50 group-hover:text-(--fuwari-primary) transition-colors">
-                {isExpanded
-                  ? m.comments_list_collapse_replies()
-                  : m.comments_list_expand_replies({ count: remaining })}
-              </span>
-            </button>
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ReplyForm({
-  userName,
-  onSubmit,
-  isSubmitting,
-  onCancel,
-  challenge,
-}: {
-  userName: string;
-  onSubmit: (content: string) => Promise<void>;
-  isSubmitting: boolean;
-  onCancel: () => void;
-  challenge?: ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-xs fuwari-text-50">
-          {m.comments_item_reply()}
-        </span>
-        <span className="text-sm font-medium text-(--fuwari-primary)">
-          @{userName}
-        </span>
-      </div>
-      <CommentEditor
-        onSubmit={onSubmit}
-        isSubmitting={isSubmitting}
-        autoFocus
-        onCancel={onCancel}
-        submitLabel={m.comments_editor_submit_reply()}
-        challenge={challenge}
-      />
-    </div>
-  );
-}
-
-function LoginToReplyPrompt({
-  userName,
-  onCancel,
-}: {
-  userName: string;
-  onCancel?: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-4 py-3 px-4 rounded-(--fuwari-radius-large) bg-(--fuwari-input-bg)">
-      <span className="text-sm fuwari-text-50 flex-1">
-        {m.comments_list_login_to_reply({ userName: userName })}
-      </span>
-      <Link to="/login">
-        <button className="fuwari-btn-primary h-8 px-4 text-sm rounded-lg">
-          {m.comments_login()}
-        </button>
-      </Link>
-      {onCancel && (
-        <button
-          onClick={onCancel}
-          className="text-sm fuwari-text-50 hover:fuwari-text-75 transition-colors"
-        >
-          {m.comments_editor_cancel()}
-        </button>
-      )}
-    </div>
+    </section>
   );
 }
