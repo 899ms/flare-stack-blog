@@ -10,30 +10,42 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 
 interface DatePickerProps {
+  /** UTC calendar dates in YYYY-MM-DD format. */
   value: string;
   onChange: (date: string) => void;
+  today?: string;
+  maxDate?: string;
   className?: string;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({
   value,
   onChange,
+  today,
+  maxDate,
   className = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const present = useMotionPresence(isOpen, MOTION.popover);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Parse initial value or default to today
-  const initialDate = value ? new Date(value) : new Date();
-  const [viewDate, setViewDate] = useState(initialDate);
+  const todayDate = today ?? new Date().toISOString().slice(0, 10);
+  const activeDate = value || todayDate;
+  const [viewDate, setViewDate] = useState(
+    () => new Date(`${activeDate}T00:00:00Z`),
+  );
   const locale = getLocale();
   const localeTag = locale === "zh" ? "zh-CN" : "en-US";
 
+  useEffect(() => {
+    setViewDate(new Date(`${activeDate}T00:00:00Z`));
+  }, [activeDate]);
+
   const daysOfWeek = Array.from({ length: 7 }, (_, index) =>
-    new Intl.DateTimeFormat(localeTag, { weekday: "narrow" }).format(
-      new Date(Date.UTC(2024, 0, 7 + index)),
-    ),
+    new Intl.DateTimeFormat(localeTag, {
+      weekday: "narrow",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(2024, 0, 7 + index))),
   );
 
   useEffect(() => {
@@ -50,51 +62,39 @@ const DatePicker: React.FC<DatePickerProps> = ({
   }, []);
 
   const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    return new Date(year, month + 1, 0).getDate();
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   };
 
   const getFirstDayOfMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    return new Date(year, month, 1).getDay();
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    return new Date(Date.UTC(year, month, 1)).getUTCDay();
   };
 
-  const changeMonth = (offset: number) => {
-    const newDate = new Date(
-      viewDate.getFullYear(),
-      viewDate.getMonth() + offset,
-      1,
+  const adjacentMonth = (offset: number) =>
+    new Date(
+      Date.UTC(viewDate.getUTCFullYear(), viewDate.getUTCMonth() + offset, 1),
     );
-    setViewDate(newDate);
+
+  const formatMonth = (date: Date) =>
+    date.toLocaleString(localeTag, {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+
+  const dayValue = (day: number) => {
+    const year = viewDate.getUTCFullYear();
+    const month = (viewDate.getUTCMonth() + 1).toString().padStart(2, "0");
+    const dayStr = day.toString().padStart(2, "0");
+    return `${year}-${month}-${dayStr}`;
   };
 
   const handleDayClick = (day: number) => {
-    const year = viewDate.getFullYear();
-    const month = (viewDate.getMonth() + 1).toString().padStart(2, "0");
-    const dayStr = day.toString().padStart(2, "0");
-    const dateString = `${year}-${month}-${dayStr}`;
-
-    onChange(dateString);
+    onChange(dayValue(day));
     setIsOpen(false);
-  };
-
-  const isSelected = (day: number) => {
-    if (!value) return false;
-    const currentYear = viewDate.getFullYear();
-    const currentMonth = viewDate.getMonth();
-    const [vYear, vMonth, vDay] = value.split("-").map(Number);
-    return vYear === currentYear && vMonth - 1 === currentMonth && vDay === day;
-  };
-
-  const isToday = (day: number) => {
-    const today = new Date();
-    return (
-      today.getDate() === day &&
-      today.getMonth() === viewDate.getMonth() &&
-      today.getFullYear() === viewDate.getFullYear()
-    );
   };
 
   const renderCalendar = () => {
@@ -107,25 +107,31 @@ const DatePicker: React.FC<DatePickerProps> = ({
     }
 
     for (let i = 1; i <= daysInMonth; i++) {
-      const selected = isSelected(i);
-      const today = isToday(i);
+      const date = dayValue(i);
+      const selected = date === value;
+      const isToday = date === todayDate;
+      const disabled = Boolean(maxDate && date > maxDate);
 
       slots.push(
         <button
           key={i}
+          type="button"
+          disabled={disabled}
+          aria-pressed={selected}
+          aria-current={isToday ? "date" : undefined}
           onClick={() => handleDayClick(i)}
           className={`
-            w-8 h-8 text-xs flex items-center justify-center rounded-lg transition-all relative
+            w-8 h-8 text-xs flex items-center justify-center rounded-lg transition-all relative disabled:cursor-not-allowed disabled:opacity-30
             ${
               selected
                 ? "bg-(--fuwari-primary) text-white"
-                : "fuwari-text-75 hover:bg-(--fuwari-btn-regular-bg)"
+                : "fuwari-text-75 enabled:hover:bg-(--fuwari-btn-regular-bg)"
             }
-            ${today && !selected ? "font-medium fuwari-text-90" : ""}
+            ${isToday && !selected ? "font-medium fuwari-text-90" : ""}
           `}
         >
           {i}
-          {today && !selected && (
+          {isToday && !selected && (
             <div className="absolute bottom-1 left-1/2 h-px w-1 -translate-x-1/2 bg-(--fuwari-primary)"></div>
           )}
         </button>,
@@ -151,7 +157,10 @@ const DatePicker: React.FC<DatePickerProps> = ({
       <button
         type="button"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen) setViewDate(new Date(`${activeDate}T00:00:00Z`));
+          setIsOpen(!isOpen);
+        }}
         className="relative h-10 w-full cursor-pointer rounded-xl bg-(--fuwari-btn-regular-bg) pl-9 pr-3 text-left text-sm fuwari-text-90"
       >
         <CalendarIcon
@@ -173,20 +182,21 @@ const DatePicker: React.FC<DatePickerProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium fuwari-text-90">
-              {viewDate.toLocaleString(localeTag, {
-                month: "long",
-                year: "numeric",
-              })}
+              {formatMonth(viewDate)}
             </h4>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => changeMonth(-1)}
+                type="button"
+                aria-label={formatMonth(adjacentMonth(-1))}
+                onClick={() => setViewDate(adjacentMonth(-1))}
                 className="p-1 fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
               >
                 <ChevronLeft size={14} strokeWidth={1.5} />
               </button>
               <button
-                onClick={() => changeMonth(1)}
+                type="button"
+                aria-label={formatMonth(adjacentMonth(1))}
+                onClick={() => setViewDate(adjacentMonth(1))}
                 className="p-1 fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
               >
                 <ChevronRight size={14} strokeWidth={1.5} />
@@ -196,9 +206,9 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
           {/* Grid Header (Days) */}
           <div className="grid grid-cols-7 gap-0.5 mb-1">
-            {daysOfWeek.map((d) => (
+            {daysOfWeek.map((d, index) => (
               <div
-                key={d}
+                key={index}
                 className="w-8 text-center text-[11px] fuwari-text-30"
               >
                 {d}

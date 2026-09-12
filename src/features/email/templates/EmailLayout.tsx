@@ -83,7 +83,7 @@ export const EmailLayout = ({
                   textTransform: "uppercase",
                 }}
               >
-                &copy; {new Date().getFullYear()} {blogConfig.title}.
+                &copy; {new Date().getUTCFullYear()} {blogConfig.title}.
               </p>
             </footer>
           </td>

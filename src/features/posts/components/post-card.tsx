@@ -1,4 +1,4 @@
-import { ClientOnly, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   BookOpen,
   Calendar,
@@ -18,7 +18,7 @@ import {
   withTagFilter,
 } from "@/features/posts/utils/post-public-search";
 import type { PostItem } from "@/features/posts/schema/posts.schema";
-import { formatDate } from "@/lib/utils";
+import { formatPublicPostDate } from "@/features/posts/utils/format-public-post-date";
 import { m } from "@/paraglide/messages";
 
 interface PostCardProps {
@@ -86,9 +86,7 @@ export function PostCard({ post, pinned, popular }: PostCardProps) {
               dateTime={post.publishedAt?.toISOString()}
               className="text-sm font-medium"
             >
-              <ClientOnly fallback="-">
-                {formatDate(post.publishedAt)}
-              </ClientOnly>
+              {formatPublicPostDate(post.publishedAt)}
             </time>
           </div>
           {post.category ? (

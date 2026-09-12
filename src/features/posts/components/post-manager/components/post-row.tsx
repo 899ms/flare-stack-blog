@@ -1,3 +1,4 @@
+import { formatPublicPostDate } from "@/features/posts/utils/format-public-post-date";
 import { ClientOnly, Link } from "@tanstack/react-router";
 import { MoreHorizontal, Pin, Trash2 } from "lucide-react";
 import {
@@ -62,7 +63,11 @@ export function PostRow({ post, sortBy, onDelete, editorState }: PostRowProps) {
         </span>
         {date ? (
           <time dateTime={date.toISOString()}>
-            <ClientOnly fallback="—">{formatDate(date)}</ClientOnly>
+            {sortBy === "publishedAt" ? (
+              formatPublicPostDate(date)
+            ) : (
+              <ClientOnly fallback="—">{formatDate(date)}</ClientOnly>
+            )}
           </time>
         ) : (
           "—"

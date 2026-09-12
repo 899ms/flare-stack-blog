@@ -39,7 +39,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     return { siteConfig };
   },
   loader: async ({ context }) => {
-    return { siteConfig: context.siteConfig };
+    return {
+      siteConfig: context.siteConfig,
+      currentYear: new Date().getUTCFullYear(),
+    };
   },
   head: ({ loaderData }) => {
     return {

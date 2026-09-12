@@ -48,7 +48,7 @@ export async function buildFeed(env: Env, executionCtx: ExecutionContext) {
     )
     .limit(100);
   const { DOMAIN } = serverEnv(env);
-  const year = new Date().getFullYear();
+  const year = new Date().getUTCFullYear();
   const feedAuthor = {
     name: siteConfig.author,
     email: getPublicFeedEmail(siteConfig.social),

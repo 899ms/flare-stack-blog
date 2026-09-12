@@ -3,7 +3,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import DatePicker from "@/components/ui/date-picker";
 import { CategorySelect } from "@/features/categories/components/category-select";
 import { TagSelector } from "@/features/tags/components/tag-selector";
-import { cn, toLocalDateString } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { PostEditorCover } from "./post-editor-cover";
 import { EDITOR_FIELD_CLASS } from "./post-editor-ui";
@@ -77,8 +77,12 @@ export function PostEditorMetadata({
           <label className="grid min-w-0 flex-1 gap-2 text-xs fuwari-text-50">
             {m.editor_meta_date()}
             <DatePicker
+              today={post.serverToday}
+              maxDate={post.serverToday}
               value={
-                post.publishedAt ? toLocalDateString(post.publishedAt) : ""
+                post.publishedAt
+                  ? post.publishedAt.toISOString().slice(0, 10)
+                  : ""
               }
               onChange={(dateStr) => {
                 if (dateStr && dateStr > post.serverToday) return;

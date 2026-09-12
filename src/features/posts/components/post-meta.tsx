@@ -1,4 +1,5 @@
-import { ClientOnly, Link } from "@tanstack/react-router";
+import { formatPublicPostDate } from "@/features/posts/utils/format-public-post-date";
+import { Link } from "@tanstack/react-router";
 import { BookOpen, Calendar, Edit, Tag } from "lucide-react";
 import {
   withCategoryFilter,
@@ -6,7 +7,7 @@ import {
   withUncategorizedFilter,
 } from "@/features/posts/utils/post-public-search";
 import type { PostItem } from "@/features/posts/schema/posts.schema";
-import { cn, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
 interface PostMetaProps {
@@ -33,9 +34,12 @@ export function PostMeta({ post, className }: PostMetaProps) {
         <div className="fuwari-meta-icon">
           <Calendar strokeWidth={1.5} size={20} />
         </div>
-        <span className="text-sm font-medium fuwari-text-50">
-          <ClientOnly fallback="-">{formatDate(published)}</ClientOnly>
-        </span>
+        <time
+          dateTime={published?.toISOString()}
+          className="text-sm font-medium fuwari-text-50"
+        >
+          {formatPublicPostDate(published)}
+        </time>
       </div>
 
       {/* Update date */}
@@ -44,9 +48,12 @@ export function PostMeta({ post, className }: PostMetaProps) {
           <div className="fuwari-meta-icon">
             <Edit strokeWidth={1.5} size={20} />
           </div>
-          <span className="text-sm font-medium fuwari-text-50">
-            <ClientOnly fallback="-">{formatDate(updated)}</ClientOnly>
-          </span>
+          <time
+            dateTime={updated?.toISOString()}
+            className="text-sm font-medium fuwari-text-50"
+          >
+            {formatPublicPostDate(updated)}
+          </time>
         </div>
       )}
 

@@ -1,6 +1,6 @@
-import { ClientOnly, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import type { PostItem } from "@/features/posts/schema/posts.schema";
-import { m } from "@/paraglide/messages";
+import { formatPublicPostDate } from "@/features/posts/utils/format-public-post-date";
 
 interface ArchivePostProps {
   post: PostItem;
@@ -19,9 +19,9 @@ export function ArchivePost({ post }: ArchivePostProps) {
       <div className="flex flex-row justify-start items-center h-full">
         {/* Date */}
         <div className="w-[15%] md:w-[10%] transition text-sm text-right fuwari-text-50">
-          <ClientOnly fallback="-">
-            {date ? m.format_month_day({ date }) : "-"}
-          </ClientOnly>
+          <time dateTime={date?.toISOString()}>
+            {formatPublicPostDate(date, { monthDay: true })}
+          </time>
         </div>
 
         {/* Dot and Line */}
