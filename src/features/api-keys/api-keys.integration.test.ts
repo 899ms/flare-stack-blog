@@ -1,4 +1,6 @@
 import { env } from "cloudflare:workers";
+import { OpenAPIHandler } from "@orpc/openapi/fetch";
+import { eq } from "drizzle-orm";
 import {
   createMockAdminSession,
   createTestContext,
@@ -6,8 +8,41 @@ import {
 } from "tests/test-utils";
 import { describe, expect, it } from "vitest";
 import { getAuth } from "@/lib/auth/auth.server";
+import { apikey } from "@/lib/db/schema/auth.table";
+import { adminProcedure } from "@/lib/orpc/procedure";
 
 describe("Admin API Keys", () => {
+  it("returns authentication errors instead of 500 for revoked and malformed keys", async () => {
+    const context = createTestContext();
+    const admin = createMockAdminSession().user;
+    await seedUser(context.db, admin);
+    const auth = getAuth({ db: context.db, env });
+    const created = await auth.api.createApiKey({
+      body: { name: "revocation-test", userId: admin.id },
+    });
+    const handler = new OpenAPIHandler({
+      protected: adminProcedure
+        .route({ method: "GET", path: "/protected" })
+        .handler(() => ({ success: true })),
+    });
+    const request = async (key: string) => {
+      const headers = new Headers({ "x-api-key": key });
+      const result = await handler.handle(
+        new Request("http://localhost:3000/protected", { headers }),
+        { context: { ...context, auth, headers } },
+      );
+      if (!result.response) throw new Error("Protected route was not matched");
+      return result.response;
+    };
+
+    expect((await request(created.key)).status).toBe(200);
+    await context.db.delete(apikey).where(eq(apikey.id, created.id));
+    const revoked = await request(created.key);
+    expect(revoked.status).toBe(401);
+    expect(await revoked.json()).toMatchObject({ code: "UNAUTHORIZED" });
+    expect((await request("invalid")).status).toBe(403);
+  });
+
   it("lets an Admin key impersonate the Admin session and blocks key management", async () => {
     const context = createTestContext();
     const admin = createMockAdminSession().user;

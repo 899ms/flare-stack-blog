@@ -1,4 +1,5 @@
 import {
+  ClientOnly,
   createFileRoute,
   Outlet,
   redirect,
@@ -157,7 +158,9 @@ function MobileTopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           <Menu size={20} strokeWidth={1.5} />
         </button>
         <h1 className="flex-1 min-w-0 truncate text-base font-medium fuwari-text-90">
-          {mobileTitle ?? pageTitle}
+          <ClientOnly fallback={m.admin_layout_title()}>
+            {mobileTitle ?? pageTitle}
+          </ClientOnly>
         </h1>
         {primaryAction ? (
           <button

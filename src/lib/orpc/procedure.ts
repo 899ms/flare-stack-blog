@@ -1,9 +1,29 @@
-import { os } from "@orpc/server";
+import { ORPCError, os } from "@orpc/server";
+import { isAPIError } from "better-auth/api";
 import { z } from "zod";
 import type { RateLimitOptions } from "@/lib/do/rate-limiter";
 import { serverEnv } from "@/lib/env/server.env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import type { ApiContext, AuthedApiContext } from "./context";
+
+async function readSession(context: ApiContext) {
+  try {
+    return await context.auth.api.getSession({ headers: context.headers });
+  } catch (error) {
+    if (
+      isAPIError(error) &&
+      (error.statusCode === 401 || error.statusCode === 403)
+    ) {
+      throw new ORPCError(
+        error.statusCode === 401 ? "UNAUTHORIZED" : "FORBIDDEN",
+        {
+          cause: error,
+        },
+      );
+    }
+    throw error;
+  }
+}
 
 export const publicProcedure = os.$context<ApiContext>().errors({
   UNAUTHORIZED: {
@@ -30,9 +50,7 @@ export const publicProcedure = os.$context<ApiContext>().errors({
 
 export const optionalSessionProcedure = publicProcedure.use(
   async ({ context, next }) => {
-    const session = await context.auth.api.getSession({
-      headers: context.headers,
-    });
+    const session = await readSession(context);
 
     return next({
       context: {
@@ -44,9 +62,7 @@ export const optionalSessionProcedure = publicProcedure.use(
 
 export const authProcedure = publicProcedure.use(
   async ({ context, errors, next }) => {
-    const session = await context.auth.api.getSession({
-      headers: context.headers,
-    });
+    const session = await readSession(context);
 
     if (!session) {
       throw errors.UNAUTHORIZED();
@@ -72,9 +88,7 @@ export const adminProcedure = authProcedure.use(
 
 export function withRateLimit(options: RateLimitOptions & { key?: string }) {
   return publicProcedure.middleware(async ({ context, errors, next }) => {
-    const session = await context.auth.api.getSession({
-      headers: context.headers,
-    });
+    const session = await readSession(context);
     const identifier =
       context.headers.get("cf-connecting-ip") || session?.user.id || "unknown";
     const scope = options.key || "default";
