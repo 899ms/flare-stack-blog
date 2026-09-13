@@ -14,7 +14,7 @@
 [![TanStack Start](https://img.shields.io/badge/TanStack%20Start-black?logo=tanstack&style=flat-square)](https://tanstack.com/start)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?logo=tailwind-css&style=flat-square)](https://tailwindcss.com)
 
-[在线演示](https://blog.dukda.com) · [部署指南](#部署指南) · [本地开发](#本地开发) · [贡献指南](./CONTRIBUTING.md) · [交流群组](https://t.me/+vWuQYybv1kgxMDkx)
+[在线演示](https://blog.dukda.com) · [部署指南](./docs/deployment.md) · [本地开发](#本地开发) · [贡献指南](./CONTRIBUTING.md) · [交流群组](https://t.me/+vWuQYybv1kgxMDkx)
 
 </div>
 
@@ -70,80 +70,7 @@ Flare Stack Blog 是一个深度拥抱 Cloudflare 生态的开源独立博客系
 
 ## 部署指南
 
-推荐使用 **Cloudflare Workers Builds**（连接 GitHub 仓库自动持续部署）。
-
-### 第一步：准备 Cloudflare 资源
-
-登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)，在你的账号下预先创建以下资源（名称自定）：
-
-1. **Workers**：新建一个 Worker（记下名称，如 `my-blog`）。
-2. **D1 数据库**：新建一个 D1 Database（记下 `Database ID`）。
-3. **KV 命名空间**：新建一个 KV Namespace（记下 `Namespace ID`）。
-4. **R2 存储桶**：新建一个 R2 Bucket（记下 `Bucket Name`）。
-5. **Queues 队列**：新建一个 Queue（记下 `Queue Name`）。
-
-### 第二步：配置构建设置
-
-1. Fork 本仓库至你的 GitHub 账号。
-2. 在 Cloudflare Worker 的管理面板中，绑定你的 Fork 仓库并选择要自动部署的生产分支。
-3. 在构建设置中填入以下构建与部署指令：
-   - **Build command**：`bun run wrangler:prepare && bun run build`
-   - **Deploy command**：`bun run deploy`
-   - *(可选)* 若系统构建镜像默认的 Bun 版本较低，可添加构建变量 `BUN_VERSION=1.3.0`。
-
-> [!TIP]
-> `wrangler.jsonc` 会在构建期间由 `bun run wrangler:prepare` 脚本依据环境变量自动生成，请**不要**将包含真实资源 ID 的 `wrangler.jsonc` 提交至公开 Git 仓库中。
-
-### 第三步：配置环境变量与机密
-
-环境变量分为**构建变量（Build Variables）**与**运行时变量/机密（Runtime Variables & Secrets）**。
-
-#### 1. 构建变量（Build Variables）
-在 Worker 的 **Builds** 设置中配置，供代码构建期与 `wrangler:prepare` 生成配置使用：
-
-| 变量名 | 必填 | 说明 |
-| :--- | :---: | :--- |
-| `WORKER_NAME` | 是 | 必须与第一步创建的 Worker 名称完全一致 |
-| `QUEUE_NAME` | 是 | 必须与第一步创建的 Queue 名称完全一致 |
-| `DOMAIN` | 是 | 站点绑定的主机域名（如 `blog.example.com`） |
-| `D1_DATABASE_ID` | 是 | 第一步创建的 D1 数据库 ID |
-| `KV_NAMESPACE_ID` | 是 | 第一步创建的 KV 命名空间 ID |
-| `BUCKET_NAME` | 是 | 第一步创建的 R2 存储桶名称 |
-| `ROUTE` | 否 | 域名绑定模式。默认使用 Custom Domain；设为 `1` 时切换为 Workers Routes 模式（`DOMAIN/*`） |
-| `ZONE_NAME` | 否 | 配合 `ROUTE` 使用的 Cloudflare 区域根域名（如 `example.com`）；省略时自动从 `DOMAIN` 推导 |
-| `VITE_TURNSTILE_SITE_KEY` | 否 | Cloudflare Turnstile 人机验证站点公钥（Site Key） |
-| `VITE_UMAMI_WEBSITE_ID` | 否 | Umami 统计公开脚本埋点使用的 Website ID |
-
-> [!TIP]
-> **关于域名绑定模式**：默认使用 Cloudflare **Custom Domain**（由 Cloudflare 自动创建与维护 DNS 记录，简单可靠）。如果你的域名已在 Cloudflare 配置了 DNS 橙色云朵代理并希望通过路由规则接管流量，可配置 `ROUTE=1` 启用 **Workers Routes** 模式。
-
-#### 2. 运行时变量与机密（Runtime Variables & Secrets）
-在 Worker 的 **Settings → Variables and Secrets** 中配置（密钥信息建议勾选 Encrypt 设为机密）：
-
-| 变量名 | 必填 | 说明 |
-| :--- | :---: | :--- |
-| `BETTER_AUTH_SECRET` | 是 | 身份认证加密密钥，可本地执行 `openssl rand -hex 32` 生成 |
-| `BETTER_AUTH_URL` | 是 | 完整的公开站点访问地址（如 `https://blog.example.com`） |
-| `DOMAIN` | 是 | 站点主机名（如 `blog.example.com`） |
-| `GITHUB_CLIENT_ID` | 是 | GitHub OAuth App 的 Client ID |
-| `GITHUB_CLIENT_SECRET` | 是 | GitHub OAuth App 的 Client Secret |
-| `TURNSTILE_SECRET_KEY` | 否 | Cloudflare Turnstile 服务端通信私钥 |
-| `UMAMI_WEBSITE_ID` | 否 | Umami 统计站点 ID（需与构建变量中的 ID 一致） |
-| `UMAMI_SRC` | 否 | Umami 脚本服务源（如 `https://cloud.umami.is`） |
-| `UMAMI_API_KEY` | 否 | Umami Cloud API 密钥（与账号密码二选一） |
-| `UMAMI_USERNAME` / `UMAMI_PASSWORD` | 否 | 自建 Umami 实例的管理账号与密码 |
-| `GITHUB_TOKEN` | 否 | GitHub Personal Access Token，避免边缘节点共享 IP 触发 GitHub API 速率限制 |
-| `ENVIRONMENT` | 否 | 环境标识，生产环境切勿填写为 `dev` |
-
-> [!NOTE]
-> 申请 GitHub OAuth App 时，授权回调地址（Authorization callback URL）请统一填写为：  
-> `https://<你的域名>/api/auth/callback/github`
-
-### 第四步：触发部署与初始化管理员
-
-1. 提交或手动触发一次 Cloudflare 构建，部署脚本会自动应用 D1 数据库最新迁移并上线 Worker。
-2. 浏览器访问你的域名，点击右上角进入注册页面。
-3. **系统创建的第一个账号会自动获得最高管理员权限**，登录后即可进入 `/admin` 仪表盘开启个性化配置与文章撰写。
+使用 GitHub 与 Cloudflare Workers Builds 部署，请阅读独立的 [图文部署指南](./docs/deployment.md)，包含首次部署、可选配置和后续更新。
 
 ## 本地开发
 
