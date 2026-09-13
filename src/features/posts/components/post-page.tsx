@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { ClientOnly, Link } from "@tanstack/react-router";
 import { Clock, FileText, Pencil } from "lucide-react";
 import {
   getPublicImageSrc,
@@ -55,18 +55,20 @@ export function PostPage({ post }: PostPageProps) {
               {m.read_time({ count: post.readTimeInMinutes })}
             </div>
           </div>
-          {session?.user.role === "admin" && (
-            <Link
-              to="/admin/posts/edit/$id"
-              params={{ id: String(post.id) }}
-              className="flex flex-row items-center fuwari-text-30 hover:fuwari-text-90 transition animate-in fade-in duration-500"
-            >
-              <div className="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 fuwari-text-50 flex items-center justify-center mr-2">
-                <Pencil strokeWidth={1.5} size={16} />
-              </div>
-              <div className="text-sm">{m.post_edit()}</div>
-            </Link>
-          )}
+          <ClientOnly>
+            {session?.user.role === "admin" && (
+              <Link
+                to="/admin/posts/edit/$id"
+                params={{ id: String(post.id) }}
+                className="flex flex-row items-center fuwari-text-30 hover:fuwari-text-90 transition animate-in fade-in duration-500"
+              >
+                <div className="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 fuwari-text-50 flex items-center justify-center mr-2">
+                  <Pencil strokeWidth={1.5} size={16} />
+                </div>
+                <div className="text-sm">{m.post_edit()}</div>
+              </Link>
+            )}
+          </ClientOnly>
         </div>
 
         {/* Title */}
